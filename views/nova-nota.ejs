@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nova Nota Fiscal</title>
+<style>
+body{font-family:Arial,sans-serif;background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;padding:20px}
+.container{max-width:900px;margin:0 auto;background:white;padding:30px;border-radius:15px;box-shadow:0 5px 20px rgba(0,0,0,0.2)}
+h1{color:#667eea;margin-bottom:20px}
+.form-group{margin-bottom:20px}
+label{display:block;margin-bottom:5px;font-weight:bold;color:#333}
+label span{color:#dc3545;font-weight:bold}
+input,textarea,select{width:100%;padding:10px;border:2px solid #e0e0e0;border-radius:5px;font-size:1em;transition:border 0.3s}
+input:focus,textarea:focus,select:focus{outline:none;border-color:#667eea}
+.btn{padding:12px 24px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;margin:5px;font-size:1em;transition:all 0.3s}
+.btn-primary{background:#667eea;color:white}
+.btn-primary:hover{background:#5568d3;transform:translateY(-2px)}
+.btn-secondary{background:#6c757d;color:white}
+.btn-secondary:hover{background:#5a6268}
+.btn-success{background:#28a745;color:white}
+.btn-success:hover{background:#218838}
+.info{background:#e3f2fd;padding:10px;border-radius:5px;margin-bottom:15px;font-size:0.9em;color:#1976d2;border-left:4px solid #1976d2}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;z-index:1000}
+.modal.active{display:flex}
+.modal-content{background:white;padding:30px;border-radius:15px;max-width:500px;width:90%;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,0.3)}
+.modal-content h2{color:#28a745;margin-bottom:15px}
+.modal-buttons{display:flex;gap:10px;justify-content:center;margin-top:20px;flex-wrap:wrap}
+.loading{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);align-items:center;justify-content:center;z-index:2000}
+.loading.active{display:flex}
+.spinner{border:8px solid #f3f3f3;border-top:8px solid #667eea;border-radius:50%;width:60px;height:60px;animation:spin 1s linear infinite}
+@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<div class="container">
+<h1>➕ Nova Nota Fiscal</h1>
+
+<div class="info">
+<strong>ℹ️ Campos obrigatórios:</strong> Tipo de Nota, NF / AP, CNPJ/CPF, Fornecedor, Valor, Datas e PDF da Nota Fiscal
+</div>
+
+<form id="formNota" enctype="multipart/form-data">
+
+<div class="form-group">
+<label>Tipo de Nota <span>*</span></label>
+<select name="tipo_nota" id="tipo_nota" required>
+    <option value="">Selecione o tipo...</option>
+    <option value="NF/AP">📄 NF / AP (Contas a Pagar)</option>
+    <option value="Insumo">🛠️ NF de Insumo (Material/Estoque)</option>
+</select>
+</div>
+
+<div class="form-group">
+<label>NF / AP (Número da Nota) <span>*</span></label>
+<input type="text" name="numero_nota" id="numero_nota" placeholder="Ex: 529, 46223, NF001" required>
+</div>
+
+<div class="form-group">
+<label>🔑 Chave de Acesso (NFe) - Opcional</label>
+<input type="text" name="chave_acesso" id="chave_acesso" maxlength="44" placeholder="44 dígitos da NFe (ex: 35180712345678901234560010000000011000000000)">
+<small style="color:#666">Digite apenas se for uma NFe eletrônica</small>
+</div>
+
+<div class="grid-2">
+<div class="form-group">
+<label>CNPJ / CPF <span>*</span></label>
+<input type="text" id="cnpj_cpf" name="cnpj_cpf" placeholder="00.000.000/0000-00 ou 000.000.000-00" maxlength="18" required>
+</div>
+
+<div class="form-group">
+<label>Fornecedor <span>*</span></label>
+<input type="text" name="fornecedor" id="fornecedor" placeholder="Nome completo do fornecedor" required>
+</div>
+</div>
+
+<div class="grid-2">
+<div class="form-group">
+<label>Valor (R$) <span>*</span></label>
+<input type="number" name="valor" id="valor" step="0.01" placeholder="0,00" required>
+</div>
+
+<div class="form-group">
+<label>Centro de Custo</label>
+<input type="text" name="centro_custo" id="centro_custo" placeholder="Ex: 8888, Depto Financeiro">
+</div>
+</div>
+
+<div class="grid-2">
+<div class="form-group">
+<label>Data de Emissão <span>*</span></label>
+<input type="date" name="data_emissao" id="data_emissao" required>
+</div>
+
+<div class="form-group">
+<label>Data de Vencimento <span>*</span></label>
+<input type="date" name="data_vencimento" id="data_vencimento" required>
+</div>
+</div>
+
+<div class="form-group">
+<label>Descrição</label>
+<textarea name="descricao" id="descricao" rows="3" placeholder="Descrição detalhada dos serviços ou produtos"></textarea>
+</div>
+
+<div class="form-group">
+<label>Observações</label>
+<textarea name="observacoes" id="observacoes" rows="3" placeholder="Informações adicionais, condições especiais ou observações importantes"></textarea>
+</div>
+
+<div class="form-group">
+<label>Anexar Nota Fiscal (PDF) <span>*</span></label>
+<input type="file" name="pdf_nota" id="pdf_nota" accept=".pdf" required>
+<small style="color:#666">Arquivo PDF da nota fiscal original (máximo 10MB)</small>
+</div>
+
+<div style="margin-top:30px">
+<button type="submit" class="btn btn-primary" id="btnCadastrar">✅ Cadastrar Nota Fiscal</button>
+<a href="/" class="btn btn-secondary">❌ Cancelar e Voltar</a>
+</div>
+
+</form>
+</div>
+
+<!-- LOADING -->
+<div id="loading" class="loading">
+<div class="spinner"></div>
+</div>
+
+<!-- MODAL DE SUCESSO -->
+<div id="modalSucesso" class="modal">
+<div class="modal-content">
+<h2>✅ Nota Cadastrada com Sucesso!</h2>
+<p>A nota fiscal foi cadastrada no sistema.</p>
+<div class="modal-buttons">
+<button class="btn btn-primary" id="btnVerNota">👁️ Ver Nota Cadastrada</button>
+<button class="btn btn-success" id="btnNovaNota">➕ Nova Nota</button>
+</div>
+</div>
+</div>
+
+<script>
+console.log('✅ Script carregado');
+let notaIdCriada = null;
+
+// Máscara para CNPJ/CPF
+document.getElementById('cnpj_cpf').addEventListener('input', function(e) {
+    let valor = e.target.value.replace(/\D/g, '');
+    if (valor.length <= 11) {
+        // CPF: 000.000.000-00
+        valor = valor.replace(/(\d{3})(\d)/, '$1.$2');
+        valor = valor.replace(/(\d{3})(\d)/, '$1.$2');
+        valor = valor.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+    } else {
+        // CNPJ: 00.000.000/0000-00
+        valor = valor.substring(0, 14);
+        valor = valor.replace(/^(\d{2})(\d)/, '$1.$2');
+        valor = valor.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+        valor = valor.replace(/\.(\d{3})(\d)/, '.$1/$2');
+        valor = valor.replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+    }
+    e.target.value = valor;
+});
+
+// Validação da chave de acesso
+document.getElementById('chave_acesso').addEventListener('input', function(e) {
+    let valor = e.target.value.replace(/\D/g, '');
+    e.target.value = valor.substring(0, 44);
+});
+
+// Auto-preenchimento de data de emissão (hoje)
+document.getElementById('data_emissao').value = new Date().toISOString().split('T')[0];
+
+// ✅ VALIDAÇÃO MOVIDA PARA O SUBMIT (NÃO MAIS NO CHANGE)
+// Removido o addEventListener('change') do campo data_vencimento
+
+// SUBMIT DO FORMULÁRIO
+document.getElementById('formNota').addEventListener('submit', function(e) {
+    e.preventDefault();
+    console.log('📝 Formulário submetido');
+    
+    // ✅ VALIDAÇÃO DE DATA APENAS NO SUBMIT
+    const emissao = document.getElementById('data_emissao').value;
+    const vencimento = document.getElementById('data_vencimento').value;
+    
+    if (vencimento && emissao && vencimento < emissao) {
+        alert('❌ Data de vencimento não pode ser anterior à data de emissão');
+        return false;
+    }
+    
+    // Mostrar loading
+    document.getElementById('loading').classList.add('active');
+    document.getElementById('btnCadastrar').disabled = true;
+    
+    const formData = new FormData(e.target);
+    
+    console.log('📦 Enviando dados...');
+    console.log('Tipo:', formData.get('tipo_nota'));
+    console.log('Número:', formData.get('numero_nota'));
+    console.log('CNPJ/CPF:', formData.get('cnpj_cpf'));
+    console.log('Fornecedor:', formData.get('fornecedor'));
+    console.log('Valor:', formData.get('valor'));
+    console.log('PDF:', formData.get('pdf_nota'));
+    
+    fetch('/api/notas', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        console.log('📡 Resposta recebida:', response.status);
+        return response.json();
+    })
+    .then(data => {
+        console.log('📊 Dados da resposta:', data);
+        
+        // Esconder loading
+        document.getElementById('loading').classList.remove('active');
+        document.getElementById('btnCadastrar').disabled = false;
+        
+        if (data.success) {
+            console.log('✅ Sucesso! ID:', data.id);
+            notaIdCriada = data.id;
+            document.getElementById('modalSucesso').classList.add('active');
+        } else {
+            console.error('❌ Erro:', data.error);
+            alert('❌ Erro ao cadastrar:\n\n' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('❌ Erro na requisição:', error);
+        
+        // Esconder loading
+        document.getElementById('loading').classList.remove('active');
+        document.getElementById('btnCadastrar').disabled = false;
+        
+        alert('❌ Erro ao cadastrar:\n\n' + error.message);
+    });
+});
+
+document.getElementById('btnVerNota').addEventListener('click', function() {
+    console.log('👁️ Redirecionando para nota:', notaIdCriada);
+    window.location.href = '/nota/' + notaIdCriada;
+});
+
+document.getElementById('btnNovaNota').addEventListener('click', function() {
+    console.log('➕ Recarregando página para nova nota');
+    window.location.reload();
+});
+
+// Fechar modal clicando fora
+document.getElementById('modalSucesso').addEventListener('click', function(e) {
+    if (e.target === this) {
+        this.classList.remove('active');
+    }
+});
+
+console.log('✅ Todos os event listeners configurados');
+</script>
+</body>
+</html>

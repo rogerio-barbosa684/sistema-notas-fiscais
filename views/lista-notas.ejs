@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= statusNome %> - Sistema de Notas Fiscais</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .info-us-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px 10px 0 0;
+            margin: -25px -25px 25px -25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .info-usuario-header h1 {
+            margin: 0;
+            font-size: 1.6em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .perfil-atual {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .perfil-administrador { background: rgba(255, 193, 7, 0.2); color: #ffc107; border: 1px solid #ffc107; }
+        .perfil-financeiro { background: rgba(33, 150, 243, 0.2); color: #2196f3; border: 1px solid #2196f3; }
+        .perfil-operacao { background: rgba(76, 175, 80, 0.2); color: #4caf50; border: 1px solid #4caf50; }
+        
+        .btn-logout {
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .btn-logout:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+        
+        .lista-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .status-header {
+            padding: 25px;
+            text-align: center;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .status-badge {
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-size: 1.3em;
+            font-weight: bold;
+            display: inline-block;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .status-entrada {
+            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+            color: #ff9800;
+            border: 2px solid #ff9800;
+        }
+        
+        .status-financeiro {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            color: #2196F3;
+            border: 2px solid #2196F3;
+        }
+        
+        .status-guarda {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            color: #4CAF50;
+            border: 2px solid #4CAF50;
+        }
+        
+        .status-info {
+            margin-top: 10px;
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .filtros-lista {
+            padding: 20px 25px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .filtros-lista form {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .filtros-lista input {
+            padding: 10px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 0.95em;
+        }
+        
+        .filtros-lista button {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .filtros-lista button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .tabela-container {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        .tabela-lista {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9em;
+        }
+        
+        .tabela-lista th {
+            background: #f8f9fa;
+            padding: 15px 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #555;
+            border-bottom: 2px solid #e0e0e0;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .tabela-lista td {
+            padding: 12px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .tabela-lista tr:hover {
+            background: #f8f9ff;
+        }
+        
+        .valor {
+            font-weight: 600;
+            color: #2e7d32;
+        }
+        
+        .badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .badge-entrada { background: #fff3cd; color: #856404; }
+        .badge-financeiro { background: #e3f2fd; color: #0d47a1; }
+        .badge-guarda { background: #e8f5e9; color: #2e7d32; }
+        
+        .btn-small {
+            padding: 6px 12px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 0.85em;
+            transition: all 0.3s ease;
+            display: inline-block;
+            margin: 2px;
+        }
+        
+        .btn-small:hover {
+            background: #5a6fd8;
+            transform: translateY(-1px);
+        }
+        
+        .btn-workflow {
+            padding: 8px 16px;
+            background: #ff9800;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 0.85em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-block;
+            margin: 2px;
+        }
+        
+        .btn-workflow:hover {
+            background: #f57c00;
+            transform: translateY(-1px);
+        }
+        
+        .btn-confirmar {
+            background: #4caf50;
+            color: white;
+        }
+        
+        .btn-confirmar:hover {
+            background: #45a049;
+        }
+        
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            padding: 25px;
+            background: #f8f9fa;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        .pagination-info {
+            color: #666;
+            font-size: 0.9em;
+            margin: 0 15px;
+        }
+        
+        .pagination-btn {
+            padding: 8px 12px;
+            border: 1px solid #e0e0e0;
+            background: white;
+            color: #333;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+        }
+        
+        .pagination-btn:hover:not(.disabled) {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .pagination-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .pagination-btn.disabled {
+            color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .tabela-vazia {
+            text-align: center;
+            padding: 80px 20px;
+            color: #999;
+        }
+        
+        .tabela-vazia div {
+            font-size: 5em;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+        
+        @media (max-width: 768px) {
+            .filtros-lista form {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .filtros-lista input,
+            .filtros-lista button {
+                width: 100%;
+            }
+            
+            .tabela-lista th,
+            .tabela-lista td {
+                padding: 8px 6px;
+                font-size: 0.85em;
+            }
+            
+            .info-usuario-header {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="info-usuario-header">
+            <h1><%= statusNome %></h1>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <span class="perfil-atual perfil-<%= usuario.categoria %>">
+                    <%= usuario.categoria === 'administrador' ? '👑 Admin' : 
+                        usuario.categoria === 'financeiro' ? '💰 Financeiro' : '📝 Operação' %>
+                </span>
+                <a href="/logout" class="btn-logout" onclick="return confirm('Deseja realmente sair do sistema?')">
+                    🚪 Sair
+                </a>
+            </div>
+        </div>
+
+        <div class="lista-container">
+            <div class="status-header">
+                <div class="status-badge status-<%= status %>">
+                    <%= statusNome %>
+                </div>
+                <div class="status-info">
+                    <%= pagination.totalNotas %> nota(s) <%= status === 'entrada' ? 'aguardando processamento' : 
+                        status === 'financeiro' ? 'aguardando pagamento' : 'arquivadas' %>
+                </div>
+            </div>
+
+            <div class="filtros-lista">
+                <form method="GET" action="/notas/<%= status %>">
+                    <input type="hidden" name="page" value="1">
+                    <input type="text" name="busca" placeholder="Buscar por número da nota ou fornecedor..." 
+                           value="<%= req.query.busca || '' %>">
+                    <button type="submit">🔍 Filtrar</button>
+                    <a href="/notas/<%= status %>" style="padding: 10px 20px; background: #6c757d; color: white; text-decoration: none; border-radius: 6px; margin-left: 10px;">🗑️ Limpar</a>
+                </form>
+            </div>
+
+            <div class="tabela-container">
+                <table class="tabela-lista">
+                    <thead>
+                        <tr>
+                            <th>Nº Nota</th>
+                            <th>Fornecedor</th>
+                            <th>Valor</th>
+                            <th>Vencimento</th>
+                            <th>Data de Criação</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (notas.length === 0) { %>
+                            <tr>
+                                <td colspan="6" class="tabela-vazia">
+                                    <div>📄</div>
+                                    <p>Nenhuma nota encontrada nesta categoria.</p>
+                                    <% if (req.query.busca) { %>
+                                        <p><small>Resultado da busca: "<%= req.query.busca %>"</small></p>
+                                    <% } %>
+                                    <a href="/" class="btn-primary" style="margin-top: 15px; display: inline-block;">← Voltar ao Dashboard</a>
+                                </td>
+                            </tr>
+                        <% } else { %>
+                            <% notas.forEach(nota => { %>
+                                <tr>
+                                    <td><strong>#<%= nota.numero_nota %></strong></td>
+                                    <td><%= nota.fornecedor %></td>
+                                    <td class="valor">R$ <%= parseFloat(nota.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></td>
+                                    <td><%= new Date(nota.data_vencimento).toLocaleDateString('pt-BR') %></td>
+                                    <td><%= new Date(nota.created_at).toLocaleDateString('pt-BR') %></td>
+                                    <td>
+                                        <a href="/nota/<%= nota.id %>" class="btn-small">👁️ Ver</a>
+                                        
+                                        <% if (status === 'entrada' && usuario.categoria === 'administrador') { %>
+                                            <a href="#" onclick="enviarParaFinanceiro(<%= nota.id %>)" class="btn-workflow">🚀 Enviar</a>
+                                        <% } %>
+                                        
+                                        <% if (status === 'financeiro' && (usuario.categoria === 'financeiro' || usuario.categoria === 'administrador')) { %>
+                                            <a href="#" onclick="confirmarPagamento(<%= nota.id %>)" class="btn-workflow btn-confirmar">💰 Pagar</a>
+                                        <% } %>
+                                    </td>
+                                </tr>
+                            <% }); %>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+
+            <% if (pagination.totalPages > 1) { %>
+                <div class="pagination">
+                    <% if (pagination.currentPage > 1) { %>
+                        <a href="/notas/<%= status %>?page=<%= pagination.currentPage - 1 %><%= req.query.busca ? '&busca=' + req.query.busca : '' %>" 
+                           class="pagination-btn">← Anterior</a>
+                    <% } else { %>
+                        <span class="pagination-btn disabled">← Anterior</span>
+                    <% } %>
+                    
+                    <span class="pagination-info">
+                        Página <%= pagination.currentPage %> de <%= pagination.totalPages %> 
+                        (mostrando <%= notas.length %> de <%= pagination.totalNotas %>)
+                    </span>
+                    
+                    <% if (pagination.currentPage < pagination.totalPages) { %>
+                        <a href="/notas/<%= status %>?page=<%= pagination.currentPage + 1 %><%= req.query.busca ? '&busca=' + req.query.busca : '' %>" 
+                           class="pagination-btn">Próxima →</a>
+                    <% } else { %>
+                        <span class="pagination-btn disabled">Próxima →</span>
+                    <% } %>
+                </div>
+            <% } %>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="/" class="btn-primary">← Voltar ao Dashboard</a>
+        </div>
+    </div>
+
+    <script>
+        function enviarParaFinanceiro(id) {
+            if (confirm('Deseja enviar esta nota para o financeiro?')) {
+                fetch(`/api/notas/${id}/enviar-financeiro`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('✅ Nota enviada para o financeiro!');
+                        location.reload();
+                    } else {
+                        alert('❌ Erro ao enviar nota.');
+                    }
+                });
+            }
+        }
+
+        function confirmarPagamento(id) {
+            if (confirm('Deseja confirmar o pagamento desta nota?')) {
+                // Redirecionar para detalhes para upload do comprovante
+                window.location.href = `/nota/${id}`;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nota #<%= nota.numero_nota %></title>
+<style>
+body{font-family:Arial,sans-serif;background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;padding:20px}
+.container{max-width:900px;margin:0 auto;background:white;padding:30px;border-radius:15px;box-shadow:0 5px 20px rgba(0,0,0,0.2)}
+h1{color:#667eea;margin-bottom:10px}
+.status{display:inline-block;padding:8px 16px;border-radius:20px;font-weight:bold;margin:10px 0}
+.status-entrada{background:#e3f2fd;color:#1976d2}
+.status-financeiro{background:#fff3e0;color:#f57c00}
+.status-guarda{background:#e8f5e9;color:#388e3c}
+.status-nfap{background:#e3f2fd;color:#1976d2;border:1px solid #bbdefb;padding:4px 8px;border-radius:12px;font-size:0.8em}
+.status-insumo{background:#fff3e0;color:#f57c00;border:1px solid #ffcc80;padding:4px 8px;border-radius:12px;font-size:0.8em}
+.info{margin:15px 0;padding:15px;background:#f8f9fa;border-radius:8px}
+.info h3{margin:0 0 8px 0;color:#667eea;font-size:0.9em}
+.info p{margin:0;font-size:1.1em}
+.docs{margin:20px 0;padding:15px;background:#f8f9fa;border-radius:8px}
+.doc-item{background:white;padding:12px;border-radius:5px;margin:8px 0;display:flex;justify-content:space-between;align-items:center}
+.btn{padding:10px 20px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;margin:5px;text-decoration:none;display:inline-block;font-size:0.9em}
+.btn-primary{background:#667eea;color:white}
+.btn-success{background:#4caf50;color:white}
+.btn-warning{background:#ff9800;color:white}
+.btn-danger{background:#dc3545;color:white}
+.btn-secondary{background:#6c757d;color:white}
+.btn:hover{opacity:0.9}
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;z-index:1000}
+.modal.active{display:flex}
+.modal-content{background:white;padding:25px;border-radius:10px;max-width:400px;width:90%;box-shadow:0 10px 40px rgba(0,0,0,0.3)}
+.form-group{margin-bottom:15px}
+.form-group label{display:block;font-weight:bold;margin-bottom:5px}
+.form-group input{width:100%;padding:10px;border:2px solid #e0e0e0;border-radius:5px}
+.acoes{margin-top:20px;display:flex;gap:10px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>
+<span class="status <%= nota.tipo_nota === 'Insumo' ? 'status-insumo' : 'status-nfap' %>">
+<%= nota.tipo_nota === 'Insumo' ? '🛠️ INSUMO' : '📄 NF/AP' %>
+</span>
+#<%= nota.numero_nota %>
+</h1>
+
+<p>
+<span class="status status-<%= nota.status %>">
+<% if(nota.status==='entrada'){ %>📥 ENTRADA<% } %>
+<% if(nota.status==='financeiro'){ %>💰 FINANCEIRO<% } %>
+<% if(nota.status==='guarda'){ %>📦 ARQUIVADA<% } %>
+</span>
+</p>
+
+<% if(nota.chave_acesso){ %>
+<div class="info">
+<h3>🔑 Chave de Acesso</h3>
+<p style="word-break:break-all;font-family:monospace;font-size:0.9em;"><%= nota.chave_acesso %></p>
+</div>
+<% } %>
+
+<% if(nota.cnpj_cpf){ %>
+<div class="info">
+<h3>CNPJ/CPF</h3>
+<p><%= nota.cnpj_cpf %></p>
+</div>
+<% } %>
+
+<div class="info"><h3>Fornecedor</h3><p><%= nota.fornecedor %></p></div>
+<div class="info"><h3>Valor</h3><p>R$ <%= parseFloat(nota.valor).toLocaleString('pt-BR',{minimumFractionDigits:2}) %></p></div>
+<div class="info"><h3>Data de Emissão</h3><p><%= new Date(nota.data_emissao).toLocaleDateString('pt-BR') %></p></div>
+<div class="info"><h3>Data de Vencimento</h3><p><%= new Date(nota.data_vencimento).toLocaleDateString('pt-BR') %></p></div>
+
+<% if(nota.data_pagamento){ %>
+<div class="info"><h3>Data de Pagamento</h3><p><%= new Date(nota.data_pagamento).toLocaleDateString('pt-BR') %></p></div>
+<% } %>
+
+<% if(nota.centro_custo){ %>
+<div class="info"><h3>Centro de Custo</h3><p><%= nota.centro_custo %></p></div>
+<% } %>
+
+<% if(nota.descricao){ %>
+<div class="info"><h3>Descrição</h3><p><%= nota.descricao %></p></div>
+<% } %>
+
+<% if(nota.observacoes){ %>
+<div class="info"><h3>Observações</h3><p><%= nota.observacoes %></p></div>
+<% } %>
+
+<div class="docs">
+<h3>📎 Documentos</h3>
+
+<% if(nota.pdf_nota_url){ %>
+<div class="doc-item">
+<div>
+<strong>📄 Nota Fiscal (PDF)</strong>
+<p style="color:#666;margin:5px 0 0 0;font-size:0.85em">Documento original</p>
+</div>
+<div>
+<a href="/uploads/<%= nota.pdf_nota_url %>" target="_blank" class="btn btn-primary">⬇️ Baixar</a>
+<% if(nota.status !== 'guarda'){ %>
+<button class="btn btn-danger" onclick="excluirPDF(<%= nota.id %>, 'nota')">🗑️</button>
+<% } %>
+</div>
+</div>
+<% } %>
+
+<% if(nota.pdf_comprovante_url){ %>
+<div class="doc-item">
+<div>
+<strong>✅ Comprovante de Pagamento (PDF)</strong>
+<p style="color:#666;margin:5px 0 0 0;font-size:0.85em">Comprovante</p>
+</div>
+<div>
+<a href="/uploads/<%= nota.pdf_comprovante_url %>" target="_blank" class="btn btn-primary">⬇️ Baixar</a>
+<% if(nota.status !== 'guarda'){ %>
+<button class="btn btn-danger" onclick="excluirPDF(<%= nota.id %>, 'comprovante')">🗑️</button>
+<% } %>
+</div>
+</div>
+<% } %>
+
+</div>
+
+<div class="acoes">
+
+<% if(nota.status === 'entrada'){ %>
+<button class="btn btn-warning" onclick="enviar(<%= nota.id %>)">💰 Enviar para Financeiro</button>
+<% } %>
+
+<% if(nota.status === 'financeiro'){ %>
+<button class="btn btn-success" onclick="abrirModal()">✅ Confirmar Pagamento</button>
+<% } %>
+
+<a href="/" class="btn btn-secondary">← Voltar ao Dashboard</a>
+
+<% if(nota.status !== 'guarda'){ %>
+<button class="btn btn-danger" onclick="excluirNota(<%= nota.id %>, '<%= nota.numero_nota %>')" style="float:right">🗑️ Excluir Nota</button>
+<% } %>
+
+</div>
+
+</div>
+
+<!-- MODAL: CONFIRMAR PAGAMENTO -->
+<div id="modal" class="modal">
+<div class="modal-content">
+<h2>Confirmar Pagamento</h2>
+<form id="formPag" enctype="multipart/form-data">
+<div class="form-group">
+<label>Data de Pagamento</label>
+<input type="date" name="data_pagamento" required>
+</div>
+<div class="form-group">
+<label>Comprovante (PDF)</label>
+<input type="file" name="pdf_comprovante" accept=".pdf" required>
+</div>
+<button type="submit" class="btn btn-success">Salvar</button>
+<button type="button" class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
+</form>
+</div>
+</div>
+
+<script>
+function enviar(id){
+    if(!confirm('Enviar para Financeiro?')) return;
+    fetch('/api/notas/' + id + '/enviar-financeiro', {method: 'POST'})
+    .then(r => r.json()).then(d => {
+        if(d.success){ alert('✅ Enviado!'); location.reload(); }
+        else{ alert('❌ ' + d.error); }
+    });
+}
+
+function abrirModal(){
+    document.getElementById('modal').classList.add('active');
+    let hoje = new Date();
+    let dia = String(hoje.getDate()).padStart(2, '0');
+    let mes = String(hoje.getMonth() + 1).padStart(2, '0');
+    let ano = hoje.getFullYear();
+    document.querySelector('input[name="data_pagamento"]').value = ano + '-' + mes + '-' + dia;
+}
+
+function fecharModal(){
+    document.getElementById('modal').classList.remove('active');
+}
+
+function excluirNota(id, numero){
+    if(!confirm('⚠️ ATENÇÃO!\n\nDeseja EXCLUIR PERMANENTEMENTE a nota ' + numero + '?\n\nTodos os arquivos anexados também serão excluídos!\n\nEsta ação NÃO pode ser desfeita!')) return;
+    fetch('/api/notas/' + id, {method: 'DELETE'})
+    .then(r => r.json()).then(d => {
+        if(d.success){ alert('✅ Nota excluída!'); window.location.href = '/'; }
+        else{ alert('❌ ' + d.error); }
+    });
+}
+
+function excluirPDF(id, tipo){
+    const msg = tipo === 'nota' ? 'Nota Fiscal' : 'Comprovante de Pagamento';
+    if(!confirm('⚠️ Deseja excluir o PDF: ' + msg + '?\n\nEsta ação NÃO pode ser desfeita!')) return;
+    fetch('/api/notas/' + id + '/excluir-pdf', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({tipo: tipo})
+    })
+    .then(r => r.json()).then(d => {
+        if(d.success){ alert('✅ PDF excluído!'); location.reload(); }
+        else{ alert('❌ ' + d.error); }
+    });
+}
+
+// Formulário de pagamento
+document.getElementById('formPag').addEventListener('submit', function(e){
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const id = <%= nota.id %>;
+    fetch('/api/notas/' + id + '/confirmar-pagamento', {method: 'POST', body: fd})
+    .then(r => r.json()).then(d => {
+        if(d.success){ alert('✅ Pago!'); location.reload(); }
+        else{ alert('❌ ' + d.error); }
+    });
+});
+
+// Fechar modal clicando fora
+document.getElementById('modal').addEventListener('click', function(e){
+    if(e.target.id === 'modal') fecharModal();
+});
+</script>
+
+</body>
+</html>

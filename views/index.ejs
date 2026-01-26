@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard - Sistema de Notas Fiscais</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;padding:15px}
+.header{background:white;padding:15px 20px;border-radius:10px;margin-bottom:15px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 10px rgba(0,0,0,0.1)}
+.header h1{margin:0;color:#667eea;font-size:1.3em}
+.user-section{display:flex;align-items:center;gap:15px}
+.btn{padding:8px 16px;border:none;border-radius:6px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-block;font-size:0.9em;transition:all 0.3s}
+.btn-primary{background:#667eea;color:white}
+.btn-primary:hover{background:#5568d3;transform:translateY(-2px)}
+.btn-danger{background:#dc3545;color:white}
+.btn-danger:hover{background:#c82333}
+.btn-success{background:#28a745;color:white}
+.btn-warning{background:#ffc107;color:#333}
+.btn-secondary{background:#6c757d;color:white}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:15px}
+.stat-card{background:white;padding:15px;border-radius:8px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.1)}
+.stat-card h3{margin:0 0 8px 0;color:#666;font-size:0.75em;text-transform:uppercase;letter-spacing:0.5px}
+.stat-card p{margin:0;font-size:1.5em;font-weight:bold;color:#667eea}
+.container{background:white;padding:15px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.1)}
+.filtros{background:#f8f9fa;padding:12px;border-radius:8px;margin-bottom:15px;border:1px solid #e0e0e0}
+.filtros h3{margin:0 0 12px 0;font-size:0.95em;color:#333;display:flex;align-items:center;gap:8px}
+.filtro-compacto{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:8px}
+.campo-filtro{position:relative}
+.campo-filtro label{font-size:0.75em;font-weight:600;margin-bottom:3px;color:#555;display:block}
+.campo-filtro input,.campo-filtro select{width:100%;padding:6px 8px;border:1px solid #ddd;border-radius:5px;font-size:0.85em;transition:all 0.3s}
+.campo-filtro input:focus,.campo-filtro select:focus{outline:none;border-color:#667eea;box-shadow:0 0 0 3px rgba(102,126,234,0.1)}
+.campo-especial{cursor:pointer}
+.campo-especial input{cursor:pointer;background:white}
+.filtro-acoes{display:flex;gap:8px;justify-content:flex-end}
+.table-wrapper{max-height:450px;overflow-y:auto;border:1px solid #ddd;border-radius:5px;margin-top:10px}
+table{width:100%;border-collapse:collapse;font-size:0.85em}
+thead{position:sticky;top:0;background:#667eea;color:white;z-index:10}
+th,td{padding:8px;text-align:left;border-bottom:1px solid #e0e0e0}
+tbody tr:hover{background:#f5f7fa}
+.status{padding:3px 8px;border-radius:10px;font-size:0.7em;font-weight:600;white-space:nowrap;display:inline-block}
+.status-nfap{background:#e3f2fd;color:#1976d2}
+.status-insumo{background:#fff3e0;color:#f57c00}
+.status-entrada{background:#e3f2fd;color:#1565c0}
+.status-financeiro{background:#fff8e1;color:#f9a825}
+.status-guarda{background:#e8f5e9;color:#2e7d32}
+.btn-small{padding:3px 8px;font-size:0.75em}
+.paginacao{display:flex;justify-content:center;align-items:center;gap:10px;margin-top:15px;padding-top:10px;border-top:1px solid #eee}
+.paginacao button{padding:6px 12px;border:1px solid #667eea;background:white;color:#667eea;border-radius:5px;cursor:pointer;font-weight:600}
+.paginacao button:hover:not(:disabled){background:#667eea;color:white}
+.paginacao button:disabled{opacity:0.5;cursor:not-allowed}
+.badge-count{background:#667eea;color:white;padding:2px 8px;border-radius:12px;font-size:0.85em;font-weight:600}
+.cnpj-cell{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;z-index:1000}
+.modal.active{display:flex}
+.modal-content{background:white;padding:25px;border-radius:10px;max-width:400px;width:90%;box-shadow:0 10px 40px rgba(0,0,0,0.3)}
+.modal-content h3{margin:0 0 15px 0;color:#333}
+.modal-form{display:flex;flex-direction:column;gap:12px}
+.modal-form label{font-size:0.85em;font-weight:600;color:#555}
+.modal-form input{padding:8px;border:2px solid #e0e0e0;border-radius:5px;font-size:0.9em}
+.modal-buttons{display:flex;gap:8px;justify-content:flex-end;margin-top:15px}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>📊 Sistema de Notas Fiscais</h1>
+  <div class="user-section">
+    <span style="color:#666">Olá, <strong><%= usuario.nome %></strong></span>
+    <a href="/nova-nota" class="btn btn-primary">+ Nova Nota</a>
+    <a href="/logout" class="btn btn-danger">Sair</a>
+  </div>
+</div>
+<div class="stats">
+  <div class="stat-card"><h3>Total</h3><p><%= stats.total %></p></div>
+  <div class="stat-card"><h3>Entrada</h3><p style="color:#388e3c"><%= stats.entrada %></p></div>
+  <div class="stat-card"><h3>Financeiro</h3><p style="color:#f9a825"><%= stats.financeiro %></p></div>
+  <div class="stat-card"><h3>Arquivadas</h3><p style="color:#2e7d32"><%= stats.guarda %></p></div>
+  <div class="stat-card"><h3>Valor Total</h3><p>R$ <%= parseFloat(stats.valor_total||0).toLocaleString('pt-BR',{minimumFractionDigits:2}) %></p></div>
+</div>
+<div class="container">
+  <div class="filtros">
+    <h3>🔍 Filtros de Busca</h3>
+    <div class="filtro-compacto">
+      <div class="campo-filtro">
+        <label>NF / AP</label>
+        <input type="text" id="filtro_numero" placeholder="Ex: 529">
+      </div>
+      <div class="campo-filtro">
+        <label>CNPJ/CPF</label>
+        <input type="text" id="filtro_cnpj" placeholder="12.345.678/0001-90">
+      </div>
+      <div class="campo-filtro">
+        <label>Fornecedor</label>
+        <input type="text" id="filtro_fornecedor" placeholder="Nome">
+      </div>
+      <div class="campo-filtro campo-especial" onclick="abrirModalValor()">
+        <label>💰 Valor (R$)</label>
+        <input type="text" id="filtro_valor_display" placeholder="Clique para definir" readonly>
+      </div>
+      <div class="campo-filtro campo-especial" onclick="abrirModalVencimento()">
+        <label>📅 Vencimento</label>
+        <input type="text" id="filtro_venc_display" placeholder="Selecione período" readonly>
+      </div>
+      <div class="campo-filtro campo-especial" onclick="abrirModalPagamento()">
+        <label>✅ Pagamento</label>
+        <input type="text" id="filtro_pag_display" placeholder="Selecione período" readonly>
+      </div>
+      <div class="campo-filtro">
+        <label>Tipo</label>
+        <select id="filtro_tipo">
+          <option value="">Todos</option>
+          <option value="NF/AP">NF / AP</option>
+          <option value="Insumo">Insumo</option>
+        </select>
+      </div>
+      <div class="campo-filtro">
+        <label>Status</label>
+        <select id="filtro_status">
+          <option value="">Todos</option>
+          <option value="entrada">Entrada</option>
+          <option value="financeiro">Financeiro</option>
+          <option value="guarda">Arquivada</option>
+        </select>
+      </div>
+    </div>
+    <div class="filtro-acoes">
+      <button class="btn btn-primary" onclick="aplicarFiltros()">🔍 Buscar</button>
+      <button class="btn btn-warning" onclick="limparFiltros()">🧹 Limpar</button>
+    </div>
+  </div>
+  <h2 style="margin-bottom:10px;font-size:1.1em;color:#333">Notas Fiscais <span class="badge-count" id="total-notas"><%= notas.length %></span></h2>
+  <div class="table-wrapper">
+    <table id="tabela-notas">
+      <thead>
+        <tr>
+          <th>Tipo</th>
+          <th>NF / AP</th>
+          <th>CNPJ/CPF</th>
+          <th>Fornecedor</th>
+          <th>Valor</th>
+          <th>Vencimento</th>
+          <th>Pagamento</th>
+          <th>Status</th>
+          <th style="text-align:center">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+      <% notas.forEach(n=>{ %>
+        <tr data-id="<%= n.id %>"
+            data-numero="<%= n.numero_nota %>"
+            data-cnpj="<%= (n.cnpj_cpf||'').toLowerCase() %>"
+            data-fornecedor="<%= n.fornecedor.toLowerCase() %>"
+            data-tipo="<%= n.tipo_nota||'NF/AP' %>"
+            data-status="<%= n.status %>"
+            data-valor="<%= n.valor %>"
+            data-vencimento="<%= n.data_vencimento.split('T')[0] %>"
+            data-pagamento="<%= n.data_pagamento ? n.data_pagamento.split('T')[0] : '' %>">
+          <td>
+            <span class="status <%= n.tipo_nota==='Insumo'?'status-insumo':'status-nfap' %>"><%= n.tipo_nota==='Insumo'?'INSUMO':'NF/AP' %></span>
+          </td>
+          <td><strong><%= n.numero_nota %></strong></td>
+          <td class="cnpj-cell"><%= n.cnpj_cpf||'—' %></td>
+          <td><%= n.fornecedor %></td>
+          <td>R$ <%= parseFloat(n.valor).toLocaleString('pt-BR',{minimumFractionDigits:2}) %></td>
+          <td><%= new Date(n.data_vencimento+'T12:00:00').toLocaleDateString('pt-BR') %></td>
+          <td><%= n.data_pagamento?new Date(n.data_pagamento+'T12:00:00').toLocaleDateString('pt-BR'):'—' %></td>
+          <td><span class="status status-<%= n.status %>"><%= n.status.toUpperCase() %></span></td>
+          <td style="text-align:center">
+            <a href="/nota/<%= n.id %>" class="btn btn-primary btn-small">👁️</a>
+            <button class="btn btn-danger btn-small" onclick="excluirNota(<%= n.id %>,'<%= n.numero_nota %>')">🗑️</button>
+          </td>
+        </tr>
+      <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <div class="paginacao">
+    <button id="btn-anterior" onclick="paginaAnterior()" disabled>← Anterior</button>
+    <span>Página <span id="pagina-atual">1</span> de <span id="total-paginas">1</span></span>
+    <button id="btn-proxima" onclick="proximaPagina()">Próxima →</button>
+  </div>
+</div>
+<!-- MODAL: FILTRO DE VALOR -->
+<div id="modalValor" class="modal">
+  <div class="modal-content">
+    <h3>💰 Filtrar por Valor</h3>
+    <div class="modal-form">
+      <label>De (R$):</label>
+      <input type="number" id="valor_min" step="0.01" placeholder="0,00">
+      <label>Até (R$):</label>
+      <input type="number" id="valor_max" step="0.01" placeholder="999999,99">
+    </div>
+    <div class="modal-buttons">
+      <button class="btn btn-secondary" onclick="fecharModalValor()">Cancelar</button>
+      <button class="btn btn-primary" onclick="aplicarFiltroValor()">Aplicar</button>
+    </div>
+  </div>
+</div>
+<!-- MODAL: FILTRO DE VENCIMENTO -->
+<div id="modalVencimento" class="modal">
+  <div class="modal-content">
+    <h3>📅 Filtrar por Vencimento</h3>
+    <div class="modal-form">
+      <label>Data De:</label>
+      <input type="date" id="venc_min">
+      <label>Data Até:</label>
+      <input type="date" id="venc_max">
+    </div>
+    <div class="modal-buttons">
+      <button class="btn btn-secondary" onclick="fecharModalVencimento()">Cancelar</button>
+      <button class="btn btn-primary" onclick="aplicarFiltroVencimento()">Aplicar</button>
+    </div>
+  </div>
+</div>
+<!-- MODAL: FILTRO DE PAGAMENTO -->
+<div id="modalPagamento" class="modal">
+  <div class="modal-content">
+    <h3>✅ Filtrar por Pagamento</h3>
+    <div class="modal-form">
+      <label>Data De:</label>
+      <input type="date" id="pag_min">
+      <label>Data Até:</label>
+      <input type="date" id="pag_max">
+    </div>
+    <div class="modal-buttons">
+      <button class="btn btn-secondary" onclick="fecharModalPagamento()">Cancelar</button>
+      <button class="btn btn-primary" onclick="aplicarFiltroPagamento()">Aplicar</button>
+    </div>
+  </div>
+</div>
+<script>
+let paginaAtual=1;
+const itensPorPagina=10;
+let notasFiltradas=[];
+let filtrosAtivos={valorMin:0,valorMax:Infinity,vencMin:null,vencMax:null,pagMin:null,pagMax:null};
+function abrirModalValor(){document.getElementById('modalValor').classList.add('active')}
+function fecharModalValor(){document.getElementById('modalValor').classList.remove('active')}
+function abrirModalVencimento(){document.getElementById('modalVencimento').classList.add('active')}
+function fecharModalVencimento(){document.getElementById('modalVencimento').classList.remove('active')}
+function abrirModalPagamento(){document.getElementById('modalPagamento').classList.add('active')}
+function fecharModalPagamento(){document.getElementById('modalPagamento').classList.remove('active')}
+function aplicarFiltroValor(){
+  filtrosAtivos.valorMin=parseFloat(document.getElementById('valor_min').value)||0;
+  filtrosAtivos.valorMax=parseFloat(document.getElementById('valor_max').value)||Infinity;
+  const campo=document.getElementById('filtro_valor_display');
+  campo.value='R$ '+filtrosAtivos.valorMin.toFixed(2)+' - '+(isFinite(filtrosAtivos.valorMax)?filtrosAtivos.valorMax.toFixed(2):'∞');
+  fecharModalValor();
+}
+function aplicarFiltroVencimento(){
+  filtrosAtivos.vencMin=document.getElementById('venc_min').value;
+  filtrosAtivos.vencMax=document.getElementById('venc_max').value;
+  const campo=document.getElementById('filtro_venc_display');
+  campo.value=(filtrosAtivos.vencMin||'...')+' - '+(filtrosAtivos.vencMax||'...');
+  fecharModalVencimento();
+}
+function aplicarFiltroPagamento(){
+  filtrosAtivos.pagMin=document.getElementById('pag_min').value;
+  filtrosAtivos.pagMax=document.getElementById('pag_max').value;
+  const campo=document.getElementById('filtro_pag_display');
+  campo.value=(filtrosAtivos.pagMin||'...')+' - '+(filtrosAtivos.pagMax||'...');
+  fecharModalPagamento();
+}
+function aplicarFiltros(){
+  const linhas=document.querySelectorAll('#tabela-notas tbody tr');
+  const numero=document.getElementById('filtro_numero').value.toLowerCase();
+  const cnpj=document.getElementById('filtro_cnpj').value.toLowerCase();
+  const fornecedor=document.getElementById('filtro_fornecedor').value.toLowerCase();
+  const tipo=document.getElementById('filtro_tipo').value;
+  const status=document.getElementById('filtro_status').value;
+  notasFiltradas=[];
+  linhas.forEach(l=>{
+    const v=parseFloat(l.dataset.valor);
+    const venc=l.dataset.vencimento;
+    const pag=l.dataset.pagamento;
+    const mostrar=
+      (!numero||l.dataset.numero.toLowerCase().includes(numero))&&
+      (!cnpj||l.dataset.cnpj.includes(cnpj))&&
+      (!fornecedor||l.dataset.fornecedor.includes(fornecedor))&&
+      (!tipo||l.dataset.tipo===tipo)&&
+      (!status||l.dataset.status===status)&&
+      v>=filtrosAtivos.valorMin&&v<=filtrosAtivos.valorMax&&
+      (!filtrosAtivos.vencMin||venc>=filtrosAtivos.vencMin)&&(!filtrosAtivos.vencMax||venc<=filtrosAtivos.vencMax)&&
+      (!filtrosAtivos.pagMin||pag&&pag>=filtrosAtivos.pagMin)&&(!filtrosAtivos.pagMax||pag&&pag<=filtrosAtivos.pagMax);
+    l.style.display=mostrar?'':'none';
+    if(mostrar)notasFiltradas.push(l);
+  });
+  document.getElementById('total-notas').textContent=notasFiltradas.length;
+  paginaAtual=1;
+  atualizarPaginacao();
+}
+function limparFiltros(){
+  document.querySelectorAll('.campo-filtro input').forEach(i=>i.value='');
+  document.querySelectorAll('.campo-filtro select').forEach(s=>s.value='');
+  filtrosAtivos={valorMin:0,valorMax:Infinity,vencMin:null,vencMax:null,pagMin:null,pagMax:null};
+  const linhas=document.querySelectorAll('#tabela-notas tbody tr');
+  linhas.forEach(l=>l.style.display='');
+  notasFiltradas=[...linhas];
+  document.getElementById('total-notas').textContent=linhas.length;
+  paginaAtual=1;
+  atualizarPaginacao();
+}
+function atualizarPaginacao(){
+  const linhas=notasFiltradas.length?notasFiltradas:document.querySelectorAll('#tabela-notas tbody tr');
+  const totalPaginas=Math.ceil(linhas.length/itensPorPagina);
+  document.getElementById('pagina-atual').textContent=paginaAtual;
+  document.getElementById('total-paginas').textContent=totalPaginas;
+  document.getElementById('btn-anterior').disabled=paginaAtual===1;
+  document.getElementById('btn-proxima').disabled=paginaAtual===totalPaginas||totalPaginas===0;
+  linhas.forEach((l,i)=>{
+    const mostrar=i>=(paginaAtual-1)*itensPorPagina&&i<paginaAtual*itensPorPagina;
+    l.style.display=mostrar?'':'none';
+  });
+}
+function proximaPagina(){paginaAtual++;atualizarPaginacao()}
+function paginaAnterior(){paginaAtual--;atualizarPaginacao()}
+function excluirNota(id,numero){
+  if(!confirm('⚠️ Deseja excluir permanentemente a nota '+numero+'?'))return;
+  fetch('/api/notas/'+id,{method:'DELETE'})
+  .then(r=>r.json()).then(d=>{
+    if(d.success){alert('✅ Nota excluída!');location.reload();}
+    else{alert('❌ '+d.error);}
+  });
+}
+document.querySelectorAll('.modal').forEach(m=>{
+  m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('active')});
+});
+window.onload=function(){
+  const linhas=document.querySelectorAll('#tabela-notas tbody tr');
+  notasFiltradas=[...linhas];
+  atualizarPaginacao();
+};
+</script>
+</body>
+</html>
