@@ -1,8 +1,10 @@
 {
   "name": "sistema-notas",
   "version": "2.0.1",
+  "description": "Sistema de gerenciamento de notas fiscais",
+  "main": "server.js",
   "engines": {
-    "node": "18.x"
+    "node": "20.x"
   },
   "scripts": {
     "start": "node server.js"
@@ -12,7 +14,15 @@
     "sqlite3": "^5.1.6",
     "multer": "^1.4.5-lts.1",
     "bcrypt": "^5.1.1",
+    "bcryptjs": "^2.4.3",
     "express-session": "^1.17.3",
     "ejs": "^3.1.9"
-  }
+  },
+  "keywords": [
+    "notas",
+    "fiscais",
+    "sistema"
+  ],
+  "author": "Rogério Barbosa",
+  "license": "MIT"
 }
