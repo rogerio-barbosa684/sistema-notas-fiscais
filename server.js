@@ -110,20 +110,37 @@ function initDatabase() {
         )
     `);
 
-    // Criar usuário padrão se não existir
-    db.get("SELECT COUNT(*) as count FROM usuarios", (err, row) => {
-        if (!err && row.count === 0) {
+    // Criar usuário padrão se não existir (VERSÃO CORRIGIDA)
+    db.get("SELECT * FROM usuarios WHERE email = ?", ['admin@sistema.com'], (err, usuario) => {
+        if (err) {
+            console.error('❌ Erro ao verificar usuário admin:', err);
+            return;
+        }
+
+        if (!usuario) {
+            // Usuário admin não existe, vamos criar
             bcrypt.hash('admin123', 10, (err, hash) => {
-                if (!err) {
-                    db.run(`INSERT INTO usuarios (nome, email, senha) VALUES (?, ?, ?)`,
-                        ['Administrador', 'admin@sistema.com', hash],
-                        () => console.log('✅ Usuário padrão criado: admin@sistema.com / admin123')
-                    );
+                if (err) {
+                    console.error('❌ Erro ao gerar hash da senha:', err);
+                    return;
                 }
+
+                db.run(
+                    `INSERT INTO usuarios (nome, email, senha) VALUES (?, ?, ?)`,
+                    ['Administrador', 'admin@sistema.com', hash],
+                    (err) => {
+                        if (err) {
+                            console.error('❌ Erro ao criar usuário admin:', err);
+                        } else {
+                            console.log('✅ Usuário padrão criado: admin@sistema.com / admin123');
+                        }
+                    }
+                );
             });
+        } else {
+            console.log('✅ Usuário admin já existe no banco');
         }
     });
-}
 
 // ROTAS - LOGIN
 app.get('/login', (req, res) => {
