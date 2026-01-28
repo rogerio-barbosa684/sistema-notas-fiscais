@@ -141,6 +141,7 @@ function initDatabase() {
             console.log('✅ Usuário admin já existe no banco');
         }
     });
+}  // ← FECHA A FUNÇÃO initDatabase()
 
 // ROTAS - LOGIN
 app.get('/login', (req, res) => {
