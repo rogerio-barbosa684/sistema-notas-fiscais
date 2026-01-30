@@ -1,8 +1,22 @@
+require('dotenv').config();
+
+const express = require('express');
+const sqlite3 = require('sqlite3').verbose();
+const multer = require('multer');
+const path = require('path');
+const bodyParser = require('body-parser');
+const bcrypt = require('bcrypt');
+const session = require('express-session');
+const fs = require('fs');
+
+const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(session({
-    secret: process.env.SESSION_SECRET || 'fallback-secret',
-    // ...
+    secret: process.env.SESSION_SECRET || 'kJ8#mP2$nQ9@vR5&wT7!xY3%zA1^bC4*dE6',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { maxAge: 24 * 60 * 60 * 1000 }
 }));
 
 const sqlite3 = require('sqlite3').verbose();

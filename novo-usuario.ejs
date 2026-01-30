@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Novo Usuário - Sistema de Notas Fiscais</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .info-usuario-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px 10px 0 0;
+            margin: -25px -25px 25px -25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .info-usuario-header h1 {
+            margin: 0;
+            font-size: 1.6em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .perfil-atual {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .perfil-administrador { background: rgba(255, 193, 7, 0.2); color: #ffc107; border: 1px solid #ffc107; }
+        
+        .btn-logout {
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .btn-logout:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+        
+        .form-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .form-header {
+            background: #f8f9fa;
+            padding: 25px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .form-header h2 {
+            margin: 0;
+            color: #333;
+            font-size: 1.4em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .form-header p {
+            color: #666;
+            margin: 8px 0 0 0;
+            font-size: 0.95em;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            padding: 30px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-group.required label::after {
+            content: ' *';
+            color: #f44336;
+            font-weight: bold;
+        }
+        
+        .form-group label {
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 0.95em;
+        }
+        
+        .form-group input,
+        .form-group select {
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            background: #fafafa;
+            box-sizing: border-box;
+            width: 100%;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .form-group select {
+            cursor: pointer;
+        }
+        
+        .categoria-info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            border-left: 4px solid #2196f3;
+            font-size: 0.9em;
+            color: #1976d2;
+        }
+        
+        .categoria-info h4 {
+            margin: 0 0 10px 0;
+            color: #0d47a1;
+            font-size: 1em;
+            font-weight: 600;
+        }
+        
+        .categoria-administrador {
+            background: #fff3cd;
+            border-left-color: #ffc107;
+            color: #856404;
+        }
+        
+        .categoria-financeiro {
+            background: #e3f2fd;
+            border-left-color: #2196f3;
+            color: #0d47a1;
+        }
+        
+        .categoria-operacao {
+            background: #e8f5e9;
+            border-left-color: #4caf50;
+            color: #2e7d32;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            padding: 30px;
+            border-top: 2px solid #e0e0e0;
+            flex-wrap: wrap;
+        }
+        
+        .btn-criar {
+            padding: 15px 35px;
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .btn-criar:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+        }
+        
+        .btn-criar:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+        
+        .btn-cancelar {
+            padding: 15px 35px;
+            background: #6c757d;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .btn-cancelar:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 8px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .erro-mensagem {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #f5c6cb;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .sucesso-mensagem {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #c3e6cb;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .senha-info {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 5px;
+            font-style: italic;
+        }
+        
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                padding: 20px;
+            }
+            
+            .info-usuario-header {
+                flex-direction: column;
+                text-align: center;
+                margin: -20px -20px 20px -20px;
+                padding: 15px 20px;
+            }
+            
+            .form-actions {
+                flex-direction: column;
+                align-items: center;
+                padding: 20px;
+            }
+            
+            .btn-criar, .btn-cancelar {
+                width: 100%;
+                max-width: 300px;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="info-usuario-header">
+            <h1>👤 Criar Novo Usuário</h1>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <span class="perfil-atual perfil-administrador">👑 Administrador</span>
+                <a href="/logout" class="btn-logout" onclick="return confirm('Deseja realmente sair do sistema?')">
+                    🚪 Sair
+                </a>
+            </div>
+        </div>
+
+        <div class="form-container">
+            <div class="form-header">
+                <h2>📋 Cadastro de Usuário</h2>
+                <p>Preencha os dados abaixo para criar um novo usuário no sistema. Todos os campos são obrigatórios.</p>
+            </div>
+
+            <% if (erro) { %>
+                <div class="erro-mensagem" style="display: block; margin: 20px 30px;">
+                    ❌ <%= erro %>
+                </div>
+            <% } %>
+
+            <form id="formNovoUsuario">
+                <div class="form-grid">
+                    <!-- Dados Pessoais -->
+                    <div class="form-group required">
+                        <label for="nome">👤 Nome Completo *</label>
+                        <input type="text" id="nome" name="nome" required 
+                               placeholder="Digite o nome completo do usuário" maxlength="100">
+                    </div>
+
+                    <div class="form-group required">
+                        <label for="email">📧 Email Corporativo *</label>
+                        <input type="email" id="email" name="email" required 
+                               placeholder="exemplo@sistema.com" maxlength="100">
+                    </div>
+
+                    <div class="form-group required">
+                        <label for="senha">🔒 Senha *</label>
+                        <input type="password" id="senha" name="senha" required 
+                               placeholder="Mínimo 6 caracteres" minlength="6">
+                        <div class="senha-info">
+                            💡 A senha deve ter pelo menos 6 caracteres. O usuário poderá alterá-la depois.
+                        </div>
+                    </div>
+
+                    <div class="form-group required">
+                        <label for="confirmar_senha">🔐 Confirmar Senha *</label>
+                        <input type="password" id="confirmar_senha" name="confirmar_senha" required 
+                               placeholder="Digite a senha novamente">
+                    </div>
+
+                    <!-- Categoria de Acesso -->
+                    <div class="form-group required">
+                        <label for="categoria">🎯 Categoria de Acesso *</label>
+                        <select id="categoria" name="categoria" required>
+                            <option value="">Selecione uma categoria</option>
+                            <option value="administrador">👑 Administrador</option>
+                            <option value="financeiro">💰 Financeiro</option>
+                            <option value="operacao">📝 Operação</option>
+                        </select>
+                        
+                        <div id="categoriaInfo" class="categoria-info" style="display: none;">
+                            <h4 id="categoriaTitulo"></h4>
+                            <p id="categoriaDescricao"></p>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="observacoes">💭 Observações</label>
+                        <textarea id="observacoes" name="observacoes" rows="3" 
+                                  placeholder="Informações adicionais sobre este usuário (opcional)"></textarea>
+                        <div class="senha-info">Detalhes importantes sobre o usuário ou sua função</div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-criar" id="btnCriar">
+                        👤 Criar Usuário
+                    </button>
+                    <a href="/usuarios" class="btn-cancelar">❌ Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Mostrar informações da categoria
+        document.getElementById('categoria').addEventListener('change', function() {
+            const categoria = this.value;
+            const infoDiv = document.getElementById('categoriaInfo');
+            const titulo = document.getElementById('categoriaTitulo');
+            const descricao = document.getElementById('categoriaDescricao');
+            
+            if (categoria) {
+                infoDiv.style.display = 'block';
+                
+                switch(categoria) {
+                    case 'administrador':
+                        titulo.textContent = '👑 Administrador';
+                        descricao.innerHTML = `
+                            <strong>Acesso Total:</strong> Pode gerenciar todos os usuários, aprovar notas, 
+                            confirmar pagamentos e acessar todas as áreas do sistema. 
+                            <strong>Responsabilidades:</strong> Administração completa do sistema.
+                        `;
+                        infoDiv.className = 'categoria-info categoria-administrador';
+                        break;
+                        
+                    case 'financeiro':
+                        titulo.textContent = '💰 Financeiro';
+                        descricao.innerHTML = `
+                            <strong>Acesso Avançado:</strong> Pode cadastrar notas, confirmar pagamentos, 
+                            anexar comprovantes e arquivar documentos. <strong>Não pode:</strong> 
+                            criar ou gerenciar outros usuários.
+                        `;
+                        infoDiv.className = 'categoria-info categoria-financeiro';
+                        break;
+                        
+                    case 'operacao':
+                        titulo.textContent = '📝 Operação';
+                        descricao.innerHTML = `
+                            <strong>Acesso Básico:</strong> Pode cadastrar notas e consultar o status de 
+                            todas as etapas. <strong>Não pode:</strong> aprovar notas, confirmar pagamentos 
+                            ou arquivar documentos.
+                        `;
+                        infoDiv.className = 'categoria-info categoria-operacao';
+                        break;
+                }
+            } else {
+                infoDiv.style.display = 'none';
+            }
+        });
+
+        // Validação de confirmação de senha
+        document.getElementById('confirmar_senha').addEventListener('input', function() {
+            const senha = document.getElementById('senha').value;
+            const confirmar = this.value;
+            
+            if (confirmar && senha !== confirmar) {
+                this.style.borderColor = '#f44336';
+            } else {
+                this.style.borderColor = '#e0e0e0';
+            }
+        });
+
+        // Validação de email único
+        document.getElementById('email').addEventListener('blur', function() {
+            const email = this.value;
+            if (email) {
+                // Verificar se email já existe (simulação)
+                fetch('/api/usuarios/verificar-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.existe) {
+                        this.style.borderColor = '#f44336';
+                        this.setCustomValidity('Este email já está cadastrado no sistema.');
+                    } else {
+                        this.style.borderColor = '#e0e0e0';
+                        this.setCustomValidity('');
+                    }
+                })
+                .catch(() => {
+                    // Em caso de erro, não bloquear
+                    this.style.borderColor = '#e0e0e0';
+                });
+            }
+        });
+
+        // Envio do formulário
+        document.getElementById('formNovoUsuario').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Validar confirmação de senha
+            const senha = document.getElementById('senha').value;
+            const confirmarSenha = document.getElementById('confirmar_senha').value;
+            
+            if (senha !== confirmarSenha) {
+                alert('❌ As senhas não coincidem. Verifique e tente novamente.');
+                document.getElementById('confirmar_senha').focus();
+                return;
+            }
+            
+            // Validar senha mínima
+            if (senha.length < 6) {
+                alert('❌ A senha deve ter pelo menos 6 caracteres.');
+                document.getElementById('senha').focus();
+                return;
+            }
+            
+            // Validar categoria
+            const categoria = document.getElementById('categoria').value;
+            if (!categoria) {
+                alert('❌ Selecione uma categoria de acesso.');
+                document.getElementById('categoria').focus();
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('nome', document.getElementById('nome').value);
+            formData.append('email', document.getElementById('email').value);
+            formData.append('senha', senha);
+            formData.append('categoria', categoria);
+            formData.append('observacoes', document.getElementById('observacoes').value);
+            
+            const submitBtn = document.getElementById('btnCriar');
+            const originalText = submitBtn.innerHTML;
+            
+            // Mostrar loading
+            submitBtn.innerHTML = '<span class="loading"></span>Criando usuário...';
+            submitBtn.disabled = true;
+
+            try {
+                const response = await fetch('/api/usuarios', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('✅ Usuário criado com sucesso!\n\n📧 Email: ' + document.getElementById('email').value + '\n🔐 Senha: ' + senha + '\n🎯 Categoria: ' + categoria);
+                    window.location.href = '/usuarios';
+                } else {
+                    alert('❌ Erro ao criar usuário: ' + (result.error || 'Erro desconhecido'));
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('❌ Erro de conexão. Verifique sua internet e tente novamente.');
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+
+        // Auto-focus no primeiro campo
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('nome').focus();
+        });
+
+        // Enter no último campo faz submit
+        document.getElementById('observacoes').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                document.getElementById('formNovoUsuario').submit();
+            }
+        });
+    </script>
+</body>
+</html>

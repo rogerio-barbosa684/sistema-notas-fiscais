@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Usuários - Sistema de Notas Fiscais</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 25px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 1.8em;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .usuarios-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .usuario-card {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 12px;
+            border-left: 4px solid #667eea;
+            transition: all 0.3s;
+        }
+
+        .usuario-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+        }
+
+        .usuario-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 15px;
+        }
+
+        .usuario-nome {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #333;
+            margin: 0 0 5px 0;
+        }
+
+        .usuario-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-admin {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .badge-usuario {
+            background: #e3f2fd;
+            color: #0d47a1;
+        }
+
+        .usuario-email {
+            color: #666;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .usuario-data {
+            color: #999;
+            font-size: 0.9em;
+            margin-bottom: 15px;
+        }
+
+        .usuario-acoes {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-editar {
+            background: #2196F3;
+            color: white;
+            padding: 8px 16px;
+            font-size: 0.9em;
+        }
+
+        .btn-editar:hover {
+            background: #1976D2;
+        }
+
+        .btn-excluir {
+            background: #f44336;
+            color: white;
+            padding: 8px 16px;
+            font-size: 0.9em;
+        }
+
+        .btn-excluir:hover {
+            background: #d32f2f;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .modal-content h2 {
+            margin: 0 0 20px 0;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 25px;
+        }
+
+        .btn-cancelar {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-cancelar:hover {
+            background: #5a6268;
+        }
+
+        @media (max-width: 768px) {
+            .usuarios-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>👥 Gerenciar Usuários</h1>
+            <div class="header-actions">
+                <button onclick="abrirModal()" class="btn btn-primary">➕ Novo Usuário</button>
+                <a href="/" class="btn btn-secondary">← Voltar</a>
+            </div>
+        </div>
+
+        <div class="content">
+            <h2 style="margin-bottom: 20px;">Usuários Cadastrados (<%= usuarios.length %>)</h2>
+
+            <% if (usuarios.length === 0) { %>
+                <div style="text-align: center; padding: 60px 20px; color: #999;">
+                    <div style="font-size: 4em; margin-bottom: 20px;">👥</div>
+                    <h3>Nenhum usuário cadastrado</h3>
+                    <p>Clique em "Novo Usuário" para começar.</p>
+                </div>
+            <% } else { %>
+                <div class="usuarios-grid">
+                    <% usuarios.forEach(u => { %>
+                        <div class="usuario-card">
+                            <div class="usuario-header">
+                                <div>
+                                    <h3 class="usuario-nome"><%= u.nome %></h3>
+                                    <span class="usuario-badge <%= u.tipo === 'admin' ? 'badge-admin' : 'badge-usuario' %>">
+                                        <%= u.tipo === 'admin' ? '👑 Administrador' : '👤 Usuário' %>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="usuario-email">
+                                📧 <%= u.email %>
+                            </div>
+
+                            <div class="usuario-data">
+                                📅 Criado em: <%= new Date(u.created_at).toLocaleDateString('pt-BR') %>
+                            </div>
+
+                            <div class="usuario-acoes">
+                                <button onclick="editarUsuario(<%= u.id %>, '<%= u.nome %>', '<%= u.email %>', '<%= u.tipo %>')" 
+                                        class="btn btn-editar">
+                                    ✏️ Editar
+                                </button>
+                                <button onclick="excluirUsuario(<%= u.id %>, '<%= u.nome %>')" 
+                                        class="btn btn-excluir">
+                                    🗑️ Excluir
+                                </button>
+                            </div>
+                        </div>
+                    <% }) %>
+                </div>
+            <% } %>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="modalUsuario" class="modal">
+        <div class="modal-content">
+            <h2 id="modalTitulo">Novo Usuário</h2>
+            <form id="formUsuario">
+                <input type="hidden" id="usuarioId">
+
+                <div class="form-group">
+                    <label>Nome Completo *</label>
+                    <input type="text" id="nome" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Email *</label>
+                    <input type="email" id="email" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Senha <span id="senhaOpcional" style="color:#999;font-weight:normal;"></span></label>
+                    <input type="password" id="senha">
+                </div>
+
+                <div class="form-group">
+                    <label>Tipo de Usuário *</label>
+                    <select id="tipo" required>
+    <option value="">Selecione...</option>
+    <option value="administrador">👑 Administrador</option>
+    <option value="financeiro">💰 Financeiro</option>
+    <option value="operacao">🧭 Operação</option>
+</select>
+                </div>
+
+                <div class="modal-buttons">
+                    <button type="button" onclick="fecharModal()" class="btn btn-cancelar">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const modal = document.getElementById('modalUsuario');
+        const form = document.getElementById('formUsuario');
+        let modoEdicao = false;
+
+        function abrirModal() {
+            modoEdicao = false;
+            document.getElementById('modalTitulo').textContent = 'Novo Usuário';
+            document.getElementById('senhaOpcional').textContent = '*';
+            form.reset();
+            document.getElementById('usuarioId').value = '';
+            document.getElementById('senha').required = true;
+            modal.classList.add('active');
+        }
+
+        function editarUsuario(id, nome, email, tipo) {
+            modoEdicao = true;
+            document.getElementById('modalTitulo').textContent = 'Editar Usuário';
+            document.getElementById('senhaOpcional').textContent = '(deixe em branco para não alterar)';
+            document.getElementById('usuarioId').value = id;
+            document.getElementById('nome').value = nome;
+            document.getElementById('email').value = email;
+            document.getElementById('tipo').value = tipo;
+            document.getElementById('senha').value = '';
+            document.getElementById('senha').required = false;
+            modal.classList.add('active');
+        }
+
+        function fecharModal() {
+            modal.classList.remove('active');
+            form.reset();
+        }
+
+        form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const id = document.getElementById('usuarioId').value;
+    const nome = document.getElementById('nome').value;
+    const email = document.getElementById('email').value;
+    const senha = document.getElementById('senha').value;
+    const tipo = document.getElementById('tipo').value;
+
+    const dados = { nome, email, tipo };
+    if (senha) dados.senha = senha;   // senha só vai se tiver sido digitada
+
+    const url = modoEdicao ? `/api/usuarios/${id}` : '/api/usuarios';
+    const method = modoEdicao ? 'PUT' : 'POST';
+
+    try {
+        const response = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dados)
+        });
+
+        const result = await response.json();
+        console.log('📥 Resposta API usuários:', result);
+
+        if (result.success) {
+            alert(modoEdicao ? 'Usuário atualizado com sucesso!' : 'Usuário criado com sucesso!');
+            location.reload();
+        } else {
+            alert('Erro: ' + result.error);
+        }
+    } catch (error) {
+        console.error('❌ Erro ao salvar usuário:', error);
+        alert('Erro ao salvar usuário');
+    }
+});
+
+        async function excluirUsuario(id, nome) {
+            if (!confirm(`Tem certeza que deseja excluir o usuário "${nome}"?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/usuarios/${id}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('Usuário excluído com sucesso!');
+                    location.reload();
+                } else {
+                    alert('Erro: ' + result.error);
+                }
+            } catch (error) {
+                alert('Erro ao excluir usuário');
+                console.error(error);
+            }
+        }
+
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                fecharModal();
+            }
+        }
+    </script>
+</body>
+</html>
