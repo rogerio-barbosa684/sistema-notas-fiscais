@@ -1,230 +1,540 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Nota #<%= nota.numero_nota %></title>
-<style>
-body{font-family:Arial,sans-serif;background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;padding:20px}
-.container{max-width:900px;margin:0 auto;background:white;padding:30px;border-radius:15px;box-shadow:0 5px 20px rgba(0,0,0,0.2)}
-h1{color:#667eea;margin-bottom:10px}
-.status{display:inline-block;padding:8px 16px;border-radius:20px;font-weight:bold;margin:10px 0}
-.status-entrada{background:#e3f2fd;color:#1976d2}
-.status-financeiro{background:#fff3e0;color:#f57c00}
-.status-guarda{background:#e8f5e9;color:#388e3c}
-.status-nfap{background:#e3f2fd;color:#1976d2;border:1px solid #bbdefb;padding:4px 8px;border-radius:12px;font-size:0.8em}
-.status-insumo{background:#fff3e0;color:#f57c00;border:1px solid #ffcc80;padding:4px 8px;border-radius:12px;font-size:0.8em}
-.info{margin:15px 0;padding:15px;background:#f8f9fa;border-radius:8px}
-.info h3{margin:0 0 8px 0;color:#667eea;font-size:0.9em}
-.info p{margin:0;font-size:1.1em}
-.docs{margin:20px 0;padding:15px;background:#f8f9fa;border-radius:8px}
-.doc-item{background:white;padding:12px;border-radius:5px;margin:8px 0;display:flex;justify-content:space-between;align-items:center}
-.btn{padding:10px 20px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;margin:5px;text-decoration:none;display:inline-block;font-size:0.9em}
-.btn-primary{background:#667eea;color:white}
-.btn-success{background:#4caf50;color:white}
-.btn-warning{background:#ff9800;color:white}
-.btn-danger{background:#dc3545;color:white}
-.btn-secondary{background:#6c757d;color:white}
-.btn:hover{opacity:0.9}
-.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;z-index:1000}
-.modal.active{display:flex}
-.modal-content{background:white;padding:25px;border-radius:10px;max-width:400px;width:90%;box-shadow:0 10px 40px rgba(0,0,0,0.3)}
-.form-group{margin-bottom:15px}
-.form-group label{display:block;font-weight:bold;margin-bottom:5px}
-.form-group input{width:100%;padding:10px;border:2px solid #e0e0e0;border-radius:5px}
-.acoes{margin-top:20px;display:flex;gap:10px;flex-wrap:wrap}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalhes da Nota - Sistema de Notas Fiscais</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 25px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 1.8em;
+        }
+
+        .status-badge {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.9em;
+        }
+
+        .status-entrada { background: #e3f2fd; color: #1565c0; }
+        .status-financeiro { background: #fff8e1; color: #f9a825; }
+        .status-guarda { background: #e8f5e9; color: #2e7d32; }
+
+        .content {
+            padding: 30px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .info-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .info-item label {
+            display: block;
+            font-size: 0.85em;
+            color: #667eea;
+            font-weight: 600;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .info-item p {
+            font-size: 1.1em;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .documentos {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .documentos h3 {
+            margin: 0 0 15px 0;
+            color: #333;
+        }
+
+        .doc-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .acoes {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #e0e0e0;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s;
+            font-size: 1em;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 0.9em;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .modal-content h2 {
+            margin: 0 0 20px 0;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 25px;
+        }
+
+        .aviso {
+            padding: 15px;
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+
+        .aviso strong {
+            color: #856404;
+        }
+    </style>
 </head>
 <body>
-<div class="container">
+    <div class="container">
+        <div class="header">
+            <h1>📄 Nota Fiscal #<%= nota.numero_nota %></h1>
+            <span class="status-badge status-<%= nota.status %>">
+                <%= nota.status.toUpperCase() %>
+            </span>
+        </div>
 
-<h1>
-<span class="status <%= nota.tipo_nota === 'Insumo' ? 'status-insumo' : 'status-nfap' %>">
-<%= nota.tipo_nota === 'Insumo' ? '🛠️ INSUMO' : '📄 NF/AP' %>
-</span>
-#<%= nota.numero_nota %>
-</h1>
+        <div class="content">
+            <div class="info-grid">
+                <div class="info-item">
+                    <label>Tipo</label>
+                    <p><%= nota.tipo_nota || 'NF/AP' %></p>
+                </div>
 
-<p>
-<span class="status status-<%= nota.status %>">
-<% if(nota.status==='entrada'){ %>📥 ENTRADA<% } %>
-<% if(nota.status==='financeiro'){ %>💰 FINANCEIRO<% } %>
-<% if(nota.status==='guarda'){ %>📦 ARQUIVADA<% } %>
-</span>
-</p>
+                <div class="info-item">
+                    <label>Número da Nota</label>
+                    <p><%= nota.numero_nota %></p>
+                </div>
 
-<% if(nota.chave_acesso){ %>
-<div class="info">
-<h3>🔑 Chave de Acesso</h3>
-<p style="word-break:break-all;font-family:monospace;font-size:0.9em;"><%= nota.chave_acesso %></p>
-</div>
-<% } %>
+                <% if (nota.chave_acesso) { %>
+                <div class="info-item">
+                    <label>Chave de Acesso</label>
+                    <p style="font-size: 0.85em;"><%= nota.chave_acesso %></p>
+                </div>
+                <% } %>
 
-<% if(nota.cnpj_cpf){ %>
-<div class="info">
-<h3>CNPJ/CPF</h3>
-<p><%= nota.cnpj_cpf %></p>
-</div>
-<% } %>
+                <div class="info-item">
+                    <label>CNPJ/CPF</label>
+                    <p><%= nota.cnpj_cpf %></p>
+                </div>
 
-<div class="info"><h3>Fornecedor</h3><p><%= nota.fornecedor %></p></div>
-<div class="info"><h3>Valor</h3><p>R$ <%= parseFloat(nota.valor).toLocaleString('pt-BR',{minimumFractionDigits:2}) %></p></div>
-<div class="info"><h3>Data de Emissão</h3><p><%= new Date(nota.data_emissao).toLocaleDateString('pt-BR') %></p></div>
-<div class="info"><h3>Data de Vencimento</h3><p><%= new Date(nota.data_vencimento).toLocaleDateString('pt-BR') %></p></div>
+                <div class="info-item">
+                    <label>Fornecedor</label>
+                    <p><%= nota.fornecedor %></p>
+                </div>
 
-<% if(nota.data_pagamento){ %>
-<div class="info"><h3>Data de Pagamento</h3><p><%= new Date(nota.data_pagamento).toLocaleDateString('pt-BR') %></p></div>
-<% } %>
+                <div class="info-item">
+                    <label>Valor</label>
+                    <p>R$ <%= parseFloat(nota.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2}) %></p>
+                </div>
 
-<% if(nota.centro_custo){ %>
-<div class="info"><h3>Centro de Custo</h3><p><%= nota.centro_custo %></p></div>
-<% } %>
+                <div class="info-item">
+                    <label>Data de Emissão</label>
+                    <p><%= new Date(nota.data_emissao + 'T12:00:00').toLocaleDateString('pt-BR') %></p>
+                </div>
 
-<% if(nota.descricao){ %>
-<div class="info"><h3>Descrição</h3><p><%= nota.descricao %></p></div>
-<% } %>
+                <div class="info-item">
+                    <label>Data de Vencimento</label>
+                    <p><%= new Date(nota.data_vencimento + 'T12:00:00').toLocaleDateString('pt-BR') %></p>
+                </div>
 
-<% if(nota.observacoes){ %>
-<div class="info"><h3>Observações</h3><p><%= nota.observacoes %></p></div>
-<% } %>
+                <% if (nota.centro_custo) { %>
+                <div class="info-item">
+                    <label>Centro de Custo</label>
+                    <p><%= nota.centro_custo %></p>
+                </div>
+                <% } %>
 
-<div class="docs">
-<h3>📎 Documentos</h3>
+                <% if (nota.data_pagamento) { %>
+                <div class="info-item">
+                    <label>Data de Pagamento</label>
+                    <p><%= new Date(nota.data_pagamento + 'T12:00:00').toLocaleDateString('pt-BR') %></p>
+                </div>
+                <% } %>
+            </div>
 
-<% if(nota.pdf_nota_url){ %>
-<div class="doc-item">
-<div>
-<strong>📄 Nota Fiscal (PDF)</strong>
-<p style="color:#666;margin:5px 0 0 0;font-size:0.85em">Documento original</p>
-</div>
-<div>
-<a href="/uploads/<%= nota.pdf_nota_url %>" target="_blank" class="btn btn-primary">⬇️ Baixar</a>
-<% if(nota.status !== 'guarda'){ %>
-<button class="btn btn-danger" onclick="excluirPDF(<%= nota.id %>, 'nota')">🗑️</button>
-<% } %>
-</div>
-</div>
-<% } %>
+            <% if (nota.descricao) { %>
+            <div class="info-item" style="margin-bottom: 20px;">
+                <label>Descrição</label>
+                <p><%= nota.descricao %></p>
+            </div>
+            <% } %>
 
-<% if(nota.pdf_comprovante_url){ %>
-<div class="doc-item">
-<div>
-<strong>✅ Comprovante de Pagamento (PDF)</strong>
-<p style="color:#666;margin:5px 0 0 0;font-size:0.85em">Comprovante</p>
-</div>
-<div>
-<a href="/uploads/<%= nota.pdf_comprovante_url %>" target="_blank" class="btn btn-primary">⬇️ Baixar</a>
-<% if(nota.status !== 'guarda'){ %>
-<button class="btn btn-danger" onclick="excluirPDF(<%= nota.id %>, 'comprovante')">🗑️</button>
-<% } %>
-</div>
-</div>
-<% } %>
+            <% if (nota.observacoes) { %>
+            <div class="info-item" style="margin-bottom: 20px;">
+                <label>Observações</label>
+                <p><%= nota.observacoes %></p>
+            </div>
+            <% } %>
 
-</div>
+            <div class="documentos">
+                <h3>📎 Documentos</h3>
 
-<div class="acoes">
+                <% if (nota.pdf_nota_url) { %>
+                <div class="doc-item">
+                    <div>
+                        <strong>📄 Nota Fiscal (PDF)</strong>
+                        <p style="color: #999; font-size: 0.9em;">Documento original</p>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <a href="/uploads/<%= nota.pdf_nota_url %>" target="_blank" class="btn btn-primary btn-small">
+                            ⬇ Baixar
+                        </a>
+                        <button onclick="excluirPDF('nota')" class="btn btn-danger btn-small">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+                <% } %>
 
-<% if(nota.status === 'entrada'){ %>
-<button class="btn btn-warning" onclick="enviar(<%= nota.id %>)">💰 Enviar para Financeiro</button>
-<% } %>
+                <% if (nota.pdf_comprovante_url) { %>
+                <div class="doc-item">
+                    <div>
+                        <strong>📄 Comprovante de Pagamento (PDF)</strong>
+                        <p style="color: #999; font-size: 0.9em;">Comprovante anexado</p>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <a href="/uploads/<%= nota.pdf_comprovante_url %>" target="_blank" class="btn btn-primary btn-small">
+                            ⬇ Baixar
+                        </a>
+                        <button onclick="excluirPDF('comprovante')" class="btn btn-danger btn-small">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+                <% } %>
+            </div>
 
-<% if(nota.status === 'financeiro'){ %>
-<button class="btn btn-success" onclick="abrirModal()">✅ Confirmar Pagamento</button>
-<% } %>
+            <div class="acoes">
+                <% if (nota.status === 'entrada') { %>
+                    <button onclick="enviarFinanceiro()" class="btn btn-primary">
+                        📤 Enviar para Financeiro
+                    </button>
+                <% } %>
 
-<a href="/" class="btn btn-secondary">← Voltar ao Dashboard</a>
+                <% if (nota.status === 'financeiro') { %>
+                    <% if (usuario.tipo === 'administrador' || usuario.tipo === 'financeiro') { %>
+                        <button onclick="abrirModalPagamento()" class="btn btn-success">
+                            ✅ Confirmar Pagamento
+                        </button>
+                    <% } else { %>
+                        <div class="aviso">
+                            <strong>ℹ️ Informação:</strong> Apenas Administradores e Financeiro podem confirmar pagamentos.
+                        </div>
+                    <% } %>
+                <% } %>
 
-<% if(nota.status !== 'guarda'){ %>
-<button class="btn btn-danger" onclick="excluirNota(<%= nota.id %>, '<%= nota.numero_nota %>')" style="float:right">🗑️ Excluir Nota</button>
-<% } %>
+                <a href="/" class="btn btn-secondary">← Voltar ao Dashboard</a>
 
-</div>
+                <button onclick="excluirNota()" class="btn btn-danger">
+                    🗑️ Excluir Nota
+                </button>
+            </div>
+        </div>
+    </div>
 
-</div>
+    <!-- Modal Confirmação de Pagamento -->
+    <div id="modalPagamento" class="modal">
+        <div class="modal-content">
+            <h2>✅ Confirmar Pagamento</h2>
+            <form id="formPagamento">
+                <div class="form-group">
+                    <label>Data do Pagamento *</label>
+                    <input type="date" id="data_pagamento" required>
+                </div>
 
-<!-- MODAL: CONFIRMAR PAGAMENTO -->
-<div id="modal" class="modal">
-<div class="modal-content">
-<h2>Confirmar Pagamento</h2>
-<form id="formPag" enctype="multipart/form-data">
-<div class="form-group">
-<label>Data de Pagamento</label>
-<input type="date" name="data_pagamento" required>
-</div>
-<div class="form-group">
-<label>Comprovante (PDF)</label>
-<input type="file" name="pdf_comprovante" accept=".pdf" required>
-</div>
-<button type="submit" class="btn btn-success">Salvar</button>
-<button type="button" class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
-</form>
-</div>
-</div>
+                <div class="form-group">
+                    <label>Comprovante de Pagamento (PDF) *</label>
+                    <input type="file" id="pdf_comprovante" accept=".pdf" required>
+                </div>
 
-<script>
-function enviar(id){
-    if(!confirm('Enviar para Financeiro?')) return;
-    fetch('/api/notas/' + id + '/enviar-financeiro', {method: 'POST'})
-    .then(r => r.json()).then(d => {
-        if(d.success){ alert('✅ Enviado!'); location.reload(); }
-        else{ alert('❌ ' + d.error); }
-    });
-}
+                <div class="modal-buttons">
+                    <button type="button" onclick="fecharModalPagamento()" class="btn btn-secondary">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-success">
+                        Confirmar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-function abrirModal(){
-    document.getElementById('modal').classList.add('active');
-    let hoje = new Date();
-    let dia = String(hoje.getDate()).padStart(2, '0');
-    let mes = String(hoje.getMonth() + 1).padStart(2, '0');
-    let ano = hoje.getFullYear();
-    document.querySelector('input[name="data_pagamento"]').value = ano + '-' + mes + '-' + dia;
-}
+    <script>
+        const notaId = <%= nota.id %>;
 
-function fecharModal(){
-    document.getElementById('modal').classList.remove('active');
-}
+        function abrirModalPagamento() {
+            document.getElementById('modalPagamento').classList.add('active');
+        }
 
-function excluirNota(id, numero){
-    if(!confirm('⚠️ ATENÇÃO!\n\nDeseja EXCLUIR PERMANENTEMENTE a nota ' + numero + '?\n\nTodos os arquivos anexados também serão excluídos!\n\nEsta ação NÃO pode ser desfeita!')) return;
-    fetch('/api/notas/' + id, {method: 'DELETE'})
-    .then(r => r.json()).then(d => {
-        if(d.success){ alert('✅ Nota excluída!'); window.location.href = '/'; }
-        else{ alert('❌ ' + d.error); }
-    });
-}
+        function fecharModalPagamento() {
+            document.getElementById('modalPagamento').classList.remove('active');
+        }
 
-function excluirPDF(id, tipo){
-    const msg = tipo === 'nota' ? 'Nota Fiscal' : 'Comprovante de Pagamento';
-    if(!confirm('⚠️ Deseja excluir o PDF: ' + msg + '?\n\nEsta ação NÃO pode ser desfeita!')) return;
-    fetch('/api/notas/' + id + '/excluir-pdf', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({tipo: tipo})
-    })
-    .then(r => r.json()).then(d => {
-        if(d.success){ alert('✅ PDF excluído!'); location.reload(); }
-        else{ alert('❌ ' + d.error); }
-    });
-}
+        document.getElementById('formPagamento').addEventListener('submit', async (e) => {
+            e.preventDefault();
 
-// Formulário de pagamento
-document.getElementById('formPag').addEventListener('submit', function(e){
-    e.preventDefault();
-    const fd = new FormData(e.target);
-    const id = <%= nota.id %>;
-    fetch('/api/notas/' + id + '/confirmar-pagamento', {method: 'POST', body: fd})
-    .then(r => r.json()).then(d => {
-        if(d.success){ alert('✅ Pago!'); location.reload(); }
-        else{ alert('❌ ' + d.error); }
-    });
-});
+            const dataPagamento = document.getElementById('data_pagamento').value;
+            const pdfComprovante = document.getElementById('pdf_comprovante').files[0];
 
-// Fechar modal clicando fora
-document.getElementById('modal').addEventListener('click', function(e){
-    if(e.target.id === 'modal') fecharModal();
-});
-</script>
+            if (!dataPagamento || !pdfComprovante) {
+                alert('Preencha todos os campos obrigatórios');
+                return;
+            }
 
+            const formData = new FormData();
+            formData.append('data_pagamento', dataPagamento);
+            formData.append('pdf_comprovante', pdfComprovante);
+
+            try {
+                const response = await fetch(`/api/notas/${notaId}/confirmar-pagamento`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('✅ Pagamento confirmado com sucesso!');
+                    location.reload();
+                } else {
+                    alert('❌ ' + result.error);
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('❌ Erro ao confirmar pagamento');
+            }
+        });
+
+        async function enviarFinanceiro() {
+            if (!confirm('Enviar esta nota para o Financeiro?')) return;
+
+            try {
+                const response = await fetch(`/api/notas/${notaId}/enviar-financeiro`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('✅ Nota enviada para o Financeiro!');
+                    location.reload();
+                } else {
+                    alert('❌ ' + result.error);
+                }
+            } catch (error) {
+                alert('❌ Erro ao enviar nota');
+            }
+        }
+
+        async function excluirNota() {
+            if (!confirm('⚠️ Deseja realmente excluir esta nota? Esta ação não pode ser desfeita.')) return;
+
+            try {
+                const response = await fetch(`/api/notas/${notaId}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('✅ Nota excluída com sucesso!');
+                    window.location.href = '/';
+                } else {
+                    alert('❌ ' + result.error);
+                }
+            } catch (error) {
+                alert('❌ Erro ao excluir nota');
+            }
+        }
+
+        async function excluirPDF(tipo) {
+            if (!confirm(`Deseja excluir o ${tipo === 'nota' ? 'PDF da nota' : 'comprovante de pagamento'}?`)) return;
+
+            try {
+                const response = await fetch(`/api/notas/${notaId}/excluir-pdf`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tipo })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('✅ Arquivo excluído!');
+                    location.reload();
+                } else {
+                    alert('❌ ' + result.error);
+                }
+            } catch (error) {
+                alert('❌ Erro ao excluir arquivo');
+            }
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('modalPagamento');
+            if (event.target == modal) {
+                fecharModalPagamento();
+            }
+        }
+    </script>
 </body>
 </html>

@@ -1,4 +1,10 @@
-const express = require('express');
+const PORT = process.env.PORT || 3000;
+
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'fallback-secret',
+    // ...
+}));
+
 const sqlite3 = require('sqlite3').verbose();
 const multer = require('multer');
 const path = require('path');
@@ -20,7 +26,7 @@ app.use(express.static('public'));
 app.use('/uploads', express.static('uploads'));
 
 app.use(session({
-    secret: 'sistema-notas-secret',
+    secret: 'kJ8#mP2$nQ9@vR5&wT7!xY3%zA1^bC4*dE6',
     resave: false,
     saveUninitialized: false,
     cookie: { maxAge: 24 * 60 * 60 * 1000 }
@@ -32,6 +38,17 @@ function verificarAuth(req, res, next) {
         return next();
     }
     res.redirect('/login');
+}
+
+// ✅ MIDDLEWARE PARA VERIFICAR SE É ADMIN
+function verificarAdmin(req, res, next) {
+    const tipo = req.session?.usuario?.tipo;
+
+    if (tipo === 'admin' || tipo === 'administrador') {
+        return next();
+    }
+
+    res.status(403).send('Acesso negado. Apenas administradores podem acessar esta página.');
 }
 
 // CRIAR PASTA UPLOADS SE NÃO EXISTIR
@@ -85,6 +102,15 @@ function initDatabase() {
         )
     `);
 
+    // ✅ ADICIONAR COLUNA 'tipo' SE NÃO EXISTIR
+    db.run(`ALTER TABLE usuarios ADD COLUMN tipo TEXT DEFAULT 'usuario'`, (err) => {
+        if (err && !err.message.includes('duplicate column')) {
+            console.error('Erro ao adicionar coluna tipo:', err);
+        } else if (!err) {
+            console.log('✅ Coluna "tipo" adicionada à tabela usuarios');
+        }
+    });
+
     // Tabela de notas fiscais
     db.run(`
         CREATE TABLE IF NOT EXISTS notas_fiscais (
@@ -110,13 +136,12 @@ function initDatabase() {
         )
     `);
 
-    // Criar usuário padrão se não existir (VERSÃO CORRIGIDA)
+    // Criar usuário admin padrão
     db.get("SELECT * FROM usuarios WHERE email = ?", ['admin@sistema.com'], (err, usuario) => {
         if (err) {
             console.error('❌ Erro ao verificar usuário admin:', err);
             return;
         }
-
         if (!usuario) {
             // Usuário admin não existe, vamos criar
             bcrypt.hash('admin123', 10, (err, hash) => {
@@ -124,21 +149,25 @@ function initDatabase() {
                     console.error('❌ Erro ao gerar hash da senha:', err);
                     return;
                 }
-
                 db.run(
-                    `INSERT INTO usuarios (nome, email, senha) VALUES (?, ?, ?)`,
-                    ['Administrador', 'admin@sistema.com', hash],
+                    `INSERT INTO usuarios (nome, email, senha, tipo) VALUES (?, ?, ?, ?)`,
+                    ['Administrador', 'admin@sistema.com', hash, 'admin'],
                     (err) => {
                         if (err) {
                             console.error('❌ Erro ao criar usuário admin:', err);
                         } else {
-                            console.log('✅ Usuário padrão criado: admin@sistema.com / admin123');
+                            console.log('✅ Usuário admin criado: admin@sistema.com / admin123');
                         }
                     }
                 );
             });
         } else {
-            console.log('✅ Usuário admin já existe no banco');
+            // ✅ SE O ADMIN JÁ EXISTE, GARANTIR QUE ELE SEJA TIPO 'admin'
+            db.run(`UPDATE usuarios SET tipo = 'admin' WHERE email = 'admin@sistema.com'`, (err) => {
+                if (!err) {
+                    console.log('✅ Usuário admin atualizado para tipo "admin"');
+                }
+            });
         }
     });
 }  // ← FECHA A FUNÇÃO initDatabase()
@@ -171,7 +200,8 @@ app.post('/login', (req, res) => {
             req.session.usuario = {
                 id: usuario.id,
                 nome: usuario.nome,
-                email: usuario.email
+                email: usuario.email,
+                tipo: usuario.tipo || 'usuario'  // ✅ INCLUIR O TIPO NA SESSÃO
             };
 
             res.redirect('/');
@@ -179,13 +209,142 @@ app.post('/login', (req, res) => {
     });
 });
 
+
 app.get('/logout', (req, res) => {
     req.session.destroy();
     res.redirect('/login');
 });
+// ========================================
+// ROTAS - GERENCIAMENTO DE USUÁRIOS (APENAS ADMIN)
+// ========================================
+
+// Listar usuários
+app.get('/usuarios', verificarAuth, verificarAdmin, (req, res) => {
+    db.all('SELECT id, nome, email, tipo, created_at FROM usuarios ORDER BY created_at DESC', (err, usuarios) => {
+        if (err) {
+            console.error('❌ Erro ao carregar usuários:', err);
+            return res.status(500).send('Erro ao carregar usuários');
+        }
+        res.render('usuarios', {
+            usuario: req.session.usuario,
+            usuarios: usuarios
+        });
+    });
+});
+
+// Criar novo usuário
+app.post('/api/usuarios', verificarAuth, verificarAdmin, (req, res) => {
+    const { nome, email, senha, tipo } = req.body;
+
+    // ✅ DEBUG: ver o que está chegando
+    console.log('📥 Criando usuário:', { nome, email, tipo, senha: senha ? '***' : 'vazio' });
+
+    // 1) Validar campos obrigatórios
+    if (!nome || !email || !senha || !tipo) {
+        console.log('❌ Campos faltando');
+        return res.json({ success: false, error: 'Todos os campos são obrigatórios' });
+    }
+
+    // 2) Verificar se email já existe
+    db.get('SELECT * FROM usuarios WHERE email = ?', [email], (err, usuarioExistente) => {
+        if (err) {
+            console.log('❌ Erro ao buscar email:', err.message);
+            return res.json({ success: false, error: 'Erro ao verificar email no banco' });
+        }
+
+        if (usuarioExistente) {
+            console.log('❌ Email já existe:', email);
+            return res.json({ success: false, error: 'Email já cadastrado' });
+        }
+
+        // 3) Gerar hash da senha
+        bcrypt.hash(senha, 10, (err, hash) => {
+            if (err) {
+                console.log('❌ Erro ao gerar hash:', err.message);
+                return res.json({ success: false, error: 'Erro ao criar senha' });
+            }
+
+            // 4) Inserir no banco
+            db.run(
+                `INSERT INTO usuarios (nome, email, senha, tipo) VALUES (?, ?, ?, ?)`,
+                [nome, email, hash, tipo],
+                function (err) {
+                    if (err) {
+                        console.log('❌ Erro ao inserir usuário:', err.message);
+                        return res.json({ success: false, error: 'Erro ao criar usuário: ' + err.message });
+                    }
+                    console.log('✅ Usuário criado com ID:', this.lastID);
+                    res.json({ success: true, id: this.lastID });
+                }
+            );
+        });
+    });
+});
+
+// Editar usuário
+app.put('/api/usuarios/:id', verificarAuth, verificarAdmin, (req, res) => {
+    const userId = req.params.id;
+    const { nome, email, tipo, senha } = req.body;
+
+    if (!nome || !email || !tipo) {
+        return res.json({ success: false, error: 'Nome, email e tipo são obrigatórios' });
+    }
+
+    // Se senha foi informada, atualizar com hash
+    if (senha && senha.trim() !== '') {
+        bcrypt.hash(senha, 10, (err, hash) => {
+            if (err) {
+                return res.json({ success: false, error: 'Erro ao atualizar senha' });
+            }
+
+            db.run(
+                `UPDATE usuarios SET nome = ?, email = ?, tipo = ?, senha = ? WHERE id = ?`,
+                [nome, email, tipo, hash, userId],
+                (err) => {
+                    if (err) {
+                        return res.json({ success: false, error: 'Erro ao atualizar usuário' });
+                    }
+                    res.json({ success: true });
+                }
+            );
+        });
+    } else {
+        // Atualizar sem alterar senha
+        db.run(
+            `UPDATE usuarios SET nome = ?, email = ?, tipo = ? WHERE id = ?`,
+            [nome, email, tipo, userId],
+            (err) => {
+                if (err) {
+                    return res.json({ success: false, error: 'Erro ao atualizar usuário' });
+                }
+                res.json({ success: true });
+            }
+        );
+    }
+});
+
+// Excluir usuário
+app.delete('/api/usuarios/:id', verificarAuth, verificarAdmin, (req, res) => {
+    const userId = req.params.id;
+
+    // Impedir exclusão do próprio usuário logado
+    if (parseInt(userId) === req.session.usuario.id) {
+        return res.json({ success: false, error: 'Você não pode excluir seu próprio usuário' });
+    }
+
+    db.run('DELETE FROM usuarios WHERE id = ?', [userId], (err) => {
+        if (err) {
+            return res.json({ success: false, error: 'Erro ao excluir usuário' });
+        }
+        res.json({ success: true });
+    });
+});
 
 // ROTAS - DASHBOARD
 app.get('/', verificarAuth, (req, res) => {
+    // ✅ DEBUG: Ver o que está vindo na sessão
+    console.log('🔍 DEBUG sessão:', req.session.usuario);
+
     db.all('SELECT * FROM notas_fiscais ORDER BY created_at DESC', (err, notas) => {
         if (err) {
             console.error('❌ Erro ao carregar notas:', err);
@@ -345,6 +504,16 @@ app.post('/api/notas/:id/enviar-financeiro', verificarAuth, (req, res) => {
 });
 
 app.post('/api/notas/:id/confirmar-pagamento', verificarAuth, upload.single('pdf_comprovante'), (req, res) => {
+    // ✅ CONTROLE DE PERMISSÃO: apenas admin e financeiro podem confirmar pagamento
+    const tipoUsuario = req.session?.usuario?.tipo;
+
+    if (tipoUsuario === 'operacao') {
+        return res.json({ 
+            success: false, 
+            error: 'Você não tem permissão para confirmar pagamentos. Apenas Administradores e Financeiro podem fazer isso.' 
+        });
+    }
+
     const notaId = req.params.id;
     const { data_pagamento } = req.body;
     const pdf_comprovante_url = req.file ? req.file.filename : null;

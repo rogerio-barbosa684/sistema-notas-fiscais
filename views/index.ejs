@@ -66,6 +66,11 @@ tbody tr:hover{background:#f5f7fa}
   <h1>📊 Sistema de Notas Fiscais</h1>
   <div class="user-section">
     <span style="color:#666">Olá, <strong><%= usuario.nome %></strong></span>
+
+    <!-- ✅ BOTÃO USUÁRIOS (SÓ PARA ADMIN) -->
+    <% if (usuario && (usuario.tipo === 'admin' || usuario.tipo === 'administrador')) { %>
+  <a href="/usuarios" class="btn btn-warning">👥 Usuários</a>
+<% } %>
     <a href="/nova-nota" class="btn btn-primary">+ Nova Nota</a>
     <a href="/logout" class="btn btn-danger">Sair</a>
   </div>
