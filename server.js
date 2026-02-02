@@ -12,24 +12,6 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(session({
-    secret: process.env.SESSION_SECRET || 'kJ8#mP2$nQ9@vR5&wT7!xY3%zA1^bC4*dE6',
-    resave: false,
-    saveUninitialized: false,
-    cookie: { maxAge: 24 * 60 * 60 * 1000 }
-}));
-
-const sqlite3 = require('sqlite3').verbose();
-const multer = require('multer');
-const path = require('path');
-const bodyParser = require('body-parser');
-const bcrypt = require('bcrypt');
-const session = require('express-session');
-const fs = require('fs');
-
-const app = express();
-const PORT = process.env.PORT || 3000;
-
 // Configurações
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -40,7 +22,7 @@ app.use(express.static('public'));
 app.use('/uploads', express.static('uploads'));
 
 app.use(session({
-    secret: 'kJ8#mP2$nQ9@vR5&wT7!xY3%zA1^bC4*dE6',
+    secret: process.env.SESSION_SECRET || 'kJ8#mP2$nQ9@vR5&wT7!xY3%zA1^bC4*dE6',
     resave: false,
     saveUninitialized: false,
     cookie: { maxAge: 24 * 60 * 60 * 1000 }
@@ -54,7 +36,7 @@ function verificarAuth(req, res, next) {
     res.redirect('/login');
 }
 
-// ✅ MIDDLEWARE PARA VERIFICAR SE É ADMIN
+// Middleware para verificar se é admin
 function verificarAdmin(req, res, next) {
     const tipo = req.session?.usuario?.tipo;
 
@@ -65,7 +47,7 @@ function verificarAdmin(req, res, next) {
     res.status(403).send('Acesso negado. Apenas administradores podem acessar esta página.');
 }
 
-// CRIAR PASTA UPLOADS SE NÃO EXISTIR
+// Criar pasta uploads se não existir
 if (!fs.existsSync('uploads')) {
     fs.mkdirSync('uploads');
     console.log('✅ Pasta uploads/ criada');
@@ -82,7 +64,7 @@ const storage = multer.diskStorage({
     }
 });
 
-const upload = multer({ 
+const upload = multer({
     storage: storage,
     limits: { fileSize: 10 * 1024 * 1024 },
     fileFilter: function (req, file, cb) {
@@ -116,7 +98,7 @@ function initDatabase() {
         )
     `);
 
-    // ✅ ADICIONAR COLUNA 'tipo' SE NÃO EXISTIR
+    // Adicionar coluna 'tipo' se não existir
     db.run(`ALTER TABLE usuarios ADD COLUMN tipo TEXT DEFAULT 'usuario'`, (err) => {
         if (err && !err.message.includes('duplicate column')) {
             console.error('Erro ao adicionar coluna tipo:', err);
@@ -157,7 +139,6 @@ function initDatabase() {
             return;
         }
         if (!usuario) {
-            // Usuário admin não existe, vamos criar
             bcrypt.hash('admin123', 10, (err, hash) => {
                 if (err) {
                     console.error('❌ Erro ao gerar hash da senha:', err);
@@ -176,7 +157,6 @@ function initDatabase() {
                 );
             });
         } else {
-            // ✅ SE O ADMIN JÁ EXISTE, GARANTIR QUE ELE SEJA TIPO 'admin'
             db.run(`UPDATE usuarios SET tipo = 'admin' WHERE email = 'admin@sistema.com'`, (err) => {
                 if (!err) {
                     console.log('✅ Usuário admin atualizado para tipo "admin"');
@@ -184,7 +164,7 @@ function initDatabase() {
             });
         }
     });
-}  // ← FECHA A FUNÇÃO initDatabase()
+}
 
 // ROTAS - LOGIN
 app.get('/login', (req, res) => {
@@ -215,7 +195,7 @@ app.post('/login', (req, res) => {
                 id: usuario.id,
                 nome: usuario.nome,
                 email: usuario.email,
-                tipo: usuario.tipo || 'usuario'  // ✅ INCLUIR O TIPO NA SESSÃO
+                tipo: usuario.tipo || 'usuario'
             };
 
             res.redirect('/');
@@ -223,16 +203,12 @@ app.post('/login', (req, res) => {
     });
 });
 
-
 app.get('/logout', (req, res) => {
     req.session.destroy();
     res.redirect('/login');
 });
-// ========================================
-// ROTAS - GERENCIAMENTO DE USUÁRIOS (APENAS ADMIN)
-// ========================================
 
-// Listar usuários
+// ROTAS - GERENCIAMENTO DE USUÁRIOS (APENAS ADMIN)
 app.get('/usuarios', verificarAuth, verificarAdmin, (req, res) => {
     db.all('SELECT id, nome, email, tipo, created_at FROM usuarios ORDER BY created_at DESC', (err, usuarios) => {
         if (err) {
@@ -246,48 +222,34 @@ app.get('/usuarios', verificarAuth, verificarAdmin, (req, res) => {
     });
 });
 
-// Criar novo usuário
 app.post('/api/usuarios', verificarAuth, verificarAdmin, (req, res) => {
     const { nome, email, senha, tipo } = req.body;
 
-    // ✅ DEBUG: ver o que está chegando
-    console.log('📥 Criando usuário:', { nome, email, tipo, senha: senha ? '***' : 'vazio' });
-
-    // 1) Validar campos obrigatórios
     if (!nome || !email || !senha || !tipo) {
-        console.log('❌ Campos faltando');
         return res.json({ success: false, error: 'Todos os campos são obrigatórios' });
     }
 
-    // 2) Verificar se email já existe
     db.get('SELECT * FROM usuarios WHERE email = ?', [email], (err, usuarioExistente) => {
         if (err) {
-            console.log('❌ Erro ao buscar email:', err.message);
             return res.json({ success: false, error: 'Erro ao verificar email no banco' });
         }
 
         if (usuarioExistente) {
-            console.log('❌ Email já existe:', email);
             return res.json({ success: false, error: 'Email já cadastrado' });
         }
 
-        // 3) Gerar hash da senha
         bcrypt.hash(senha, 10, (err, hash) => {
             if (err) {
-                console.log('❌ Erro ao gerar hash:', err.message);
                 return res.json({ success: false, error: 'Erro ao criar senha' });
             }
 
-            // 4) Inserir no banco
             db.run(
                 `INSERT INTO usuarios (nome, email, senha, tipo) VALUES (?, ?, ?, ?)`,
                 [nome, email, hash, tipo],
                 function (err) {
                     if (err) {
-                        console.log('❌ Erro ao inserir usuário:', err.message);
                         return res.json({ success: false, error: 'Erro ao criar usuário: ' + err.message });
                     }
-                    console.log('✅ Usuário criado com ID:', this.lastID);
                     res.json({ success: true, id: this.lastID });
                 }
             );
@@ -295,7 +257,6 @@ app.post('/api/usuarios', verificarAuth, verificarAdmin, (req, res) => {
     });
 });
 
-// Editar usuário
 app.put('/api/usuarios/:id', verificarAuth, verificarAdmin, (req, res) => {
     const userId = req.params.id;
     const { nome, email, tipo, senha } = req.body;
@@ -304,7 +265,6 @@ app.put('/api/usuarios/:id', verificarAuth, verificarAdmin, (req, res) => {
         return res.json({ success: false, error: 'Nome, email e tipo são obrigatórios' });
     }
 
-    // Se senha foi informada, atualizar com hash
     if (senha && senha.trim() !== '') {
         bcrypt.hash(senha, 10, (err, hash) => {
             if (err) {
@@ -323,7 +283,6 @@ app.put('/api/usuarios/:id', verificarAuth, verificarAdmin, (req, res) => {
             );
         });
     } else {
-        // Atualizar sem alterar senha
         db.run(
             `UPDATE usuarios SET nome = ?, email = ?, tipo = ? WHERE id = ?`,
             [nome, email, tipo, userId],
@@ -337,11 +296,9 @@ app.put('/api/usuarios/:id', verificarAuth, verificarAdmin, (req, res) => {
     }
 });
 
-// Excluir usuário
 app.delete('/api/usuarios/:id', verificarAuth, verificarAdmin, (req, res) => {
     const userId = req.params.id;
 
-    // Impedir exclusão do próprio usuário logado
     if (parseInt(userId) === req.session.usuario.id) {
         return res.json({ success: false, error: 'Você não pode excluir seu próprio usuário' });
     }
@@ -356,9 +313,6 @@ app.delete('/api/usuarios/:id', verificarAuth, verificarAdmin, (req, res) => {
 
 // ROTAS - DASHBOARD
 app.get('/', verificarAuth, (req, res) => {
-    // ✅ DEBUG: Ver o que está vindo na sessão
-    console.log('🔍 DEBUG sessão:', req.session.usuario);
-
     db.all('SELECT * FROM notas_fiscais ORDER BY created_at DESC', (err, notas) => {
         if (err) {
             console.error('❌ Erro ao carregar notas:', err);
@@ -374,10 +328,10 @@ app.get('/', verificarAuth, (req, res) => {
                     SUM(CASE WHEN tipo_nota = 'Insumo' THEN 1 ELSE 0 END) as insumo,
                     SUM(valor) as valor_total
                 FROM notas_fiscais`, (err, stats) => {
-            
-            const estatisticas = stats[0] || { 
-                total: 0, entrada: 0, financeiro: 0, guarda: 0, 
-                nfap: 0, insumo: 0, valor_total: 0 
+
+            const estatisticas = stats[0] || {
+                total: 0, entrada: 0, financeiro: 0, guarda: 0,
+                nfap: 0, insumo: 0, valor_total: 0
             };
 
             res.render('index', {
@@ -395,56 +349,28 @@ app.get('/nova-nota', verificarAuth, (req, res) => {
 });
 
 app.post('/api/notas', verificarAuth, upload.single('pdf_nota'), (req, res) => {
-    console.log('\n========================================');
-    console.log('📥 RECEBENDO CADASTRO DE NOTA FISCAL');
-    console.log('========================================');
-    console.log('📋 Body recebido:', JSON.stringify(req.body, null, 2));
-    console.log('📎 Arquivo recebido:', req.file ? {
-        fieldname: req.file.fieldname,
-        originalname: req.file.originalname,
-        filename: req.file.filename,
-        size: req.file.size,
-        path: req.file.path
-    } : 'NENHUM ARQUIVO');
-    console.log('========================================\n');
-
-    const { 
-        tipo_nota, 
-        numero_nota, 
-        chave_acesso, 
-        cnpj_cpf, 
-        fornecedor, 
-        data_emissao, 
-        data_vencimento, 
-        valor, 
-        descricao, 
-        centro_custo, 
-        observacoes 
+    const {
+        tipo_nota,
+        numero_nota,
+        chave_acesso,
+        cnpj_cpf,
+        fornecedor,
+        data_emissao,
+        data_vencimento,
+        valor,
+        descricao,
+        centro_custo,
+        observacoes
     } = req.body;
-    
+
     const pdf_nota_url = req.file ? req.file.filename : null;
 
-    // Validação de campos obrigatórios
     if (!tipo_nota || !numero_nota || !cnpj_cpf || !fornecedor || !data_emissao || !data_vencimento || !valor || !pdf_nota_url) {
-        const camposFaltando = [];
-        if (!tipo_nota) camposFaltando.push('Tipo de Nota');
-        if (!numero_nota) camposFaltando.push('Número da Nota');
-        if (!cnpj_cpf) camposFaltando.push('CNPJ/CPF');
-        if (!fornecedor) camposFaltando.push('Fornecedor');
-        if (!data_emissao) camposFaltando.push('Data de Emissão');
-        if (!data_vencimento) camposFaltando.push('Data de Vencimento');
-        if (!valor) camposFaltando.push('Valor');
-        if (!pdf_nota_url) camposFaltando.push('PDF da Nota');
-        
-        console.error('❌ CAMPOS OBRIGATÓRIOS FALTANDO:', camposFaltando);
-        return res.json({ 
-            success: false, 
-            error: `Campos obrigatórios faltando: ${camposFaltando.join(', ')}` 
+        return res.json({
+            success: false,
+            error: 'Campos obrigatórios faltando'
         });
     }
-
-    console.log('✅ Validação de campos OK');
-    console.log('🔄 Tentando inserir no banco de dados...');
 
     const sql = `INSERT INTO notas_fiscais 
             (tipo_nota, numero_nota, chave_acesso, cnpj_cpf, fornecedor, data_emissao, data_vencimento, valor, descricao, centro_custo, 
@@ -452,35 +378,24 @@ app.post('/api/notas', verificarAuth, upload.single('pdf_nota'), (req, res) => {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'entrada', ?, ?)`;
 
     const params = [
-        tipo_nota, 
-        numero_nota, 
-        chave_acesso || null, 
-        cnpj_cpf, 
-        fornecedor, 
-        data_emissao, 
-        data_vencimento, 
-        parseFloat(valor), 
-        descricao || null, 
-        centro_custo || null, 
-        pdf_nota_url, 
+        tipo_nota,
+        numero_nota,
+        chave_acesso || null,
+        cnpj_cpf,
+        fornecedor,
+        data_emissao,
+        data_vencimento,
+        parseFloat(valor),
+        descricao || null,
+        centro_custo || null,
+        pdf_nota_url,
         observacoes || null
     ];
 
-    console.log('📝 SQL:', sql);
-    console.log('📝 Parâmetros:', params);
-
     db.run(sql, params, function(err) {
         if (err) {
-            console.error('❌❌❌ ERRO AO INSERIR NOTA NO BANCO ❌❌❌');
-            console.error('Erro:', err);
-            console.error('Mensagem:', err.message);
             return res.json({ success: false, error: 'Erro ao criar nota fiscal: ' + err.message });
         }
-        
-        console.log('✅✅✅ NOTA CADASTRADA COM SUCESSO ✅✅✅');
-        console.log('🆔 ID da nota criada:', this.lastID);
-        console.log('========================================\n');
-        
         res.json({ success: true, id: this.lastID });
     });
 });
@@ -518,13 +433,12 @@ app.post('/api/notas/:id/enviar-financeiro', verificarAuth, (req, res) => {
 });
 
 app.post('/api/notas/:id/confirmar-pagamento', verificarAuth, upload.single('pdf_comprovante'), (req, res) => {
-    // ✅ CONTROLE DE PERMISSÃO: apenas admin e financeiro podem confirmar pagamento
     const tipoUsuario = req.session?.usuario?.tipo;
 
     if (tipoUsuario === 'operacao') {
-        return res.json({ 
-            success: false, 
-            error: 'Você não tem permissão para confirmar pagamentos. Apenas Administradores e Financeiro podem fazer isso.' 
+        return res.json({
+            success: false,
+            error: 'Você não tem permissão para confirmar pagamentos. Apenas Administradores e Financeiro podem fazer isso.'
         });
     }
 
@@ -558,7 +472,6 @@ app.delete('/api/notas/:id', verificarAuth, (req, res) => {
             return res.json({ success: false, error: 'Nota não encontrada' });
         }
 
-        // Excluir arquivos físicos
         if (nota.pdf_nota_url) {
             const caminhoNota = path.join(__dirname, 'uploads', nota.pdf_nota_url);
             if (fs.existsSync(caminhoNota)) fs.unlinkSync(caminhoNota);
@@ -568,7 +481,6 @@ app.delete('/api/notas/:id', verificarAuth, (req, res) => {
             if (fs.existsSync(caminhoComp)) fs.unlinkSync(caminhoComp);
         }
 
-        // Excluir do banco
         db.run('DELETE FROM notas_fiscais WHERE id = ?', [notaId], (err) => {
             if (err) {
                 return res.json({ success: false, error: 'Erro ao excluir nota' });
