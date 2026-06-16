@@ -1,7 +1,7 @@
 require('dotenv').config();
 
 const express = require('express');
-const db = require('./db');
+const db = require('./db-adapter');
 const multer = require('multer');
 const path = require('path');
 const bodyParser = require('body-parser');
@@ -40,7 +40,7 @@ function verificarAuth(req, res, next) {
 function verificarAdmin(req, res, next) {
     const tipo = req.session?.usuario?.tipo;
 
-    if (tipo === 'admin' || tipo === 'administrador') {
+    if (tipo === 'administrador') {
         return next();
     }
 
@@ -76,69 +76,6 @@ const upload = multer({
     }
 });
 
-// Inicializar banco de dados PostgreSQL
-async function initDatabase() {
-    try {
-        // Tabela de usuários
-        await db.query(`
-            CREATE TABLE IF NOT EXISTS usuarios (
-                id SERIAL PRIMARY KEY,
-                nome TEXT NOT NULL,
-                email TEXT UNIQUE NOT NULL,
-                senha TEXT NOT NULL,
-                tipo TEXT DEFAULT 'usuario',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-
-        // Tabela de notas fiscais
-        await db.query(`
-            CREATE TABLE IF NOT EXISTS notas_fiscais (
-                id SERIAL PRIMARY KEY,
-                tipo_nota TEXT DEFAULT 'NF/AP',
-                numero_nota TEXT NOT NULL,
-                chave_acesso TEXT,
-                cnpj_cpf TEXT,
-                fornecedor TEXT NOT NULL,
-                data_emissao DATE NOT NULL,
-                data_vencimento DATE NOT NULL,
-                valor DECIMAL(10,2) NOT NULL,
-                descricao TEXT,
-                centro_custo TEXT,
-                status TEXT DEFAULT 'entrada',
-                pdf_nota_url TEXT,
-                pdf_comprovante_url TEXT,
-                data_pagamento DATE,
-                observacoes TEXT,
-                origem TEXT DEFAULT 'manual',
-                validado_empresa INTEGER DEFAULT 0,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-
-        console.log('✅ Tabelas criadas/verificadas no PostgreSQL');
-
-        // Criar usuário admin padrão
-        const { rows } = await db.query("SELECT * FROM usuarios WHERE email = $1", ['admin@sistema.com']);
-
-        if (rows.length === 0) {
-            const hash = await bcrypt.hash('admin123', 10);
-            await db.query(
-                `INSERT INTO usuarios (nome, email, senha, tipo) VALUES ($1, $2, $3, $4)`,
-                ['Administrador', 'admin@sistema.com', hash, 'admin']
-            );
-            console.log('✅ Usuário admin criado: admin@sistema.com / admin123');
-        } else {
-            await db.query(`UPDATE usuarios SET tipo = 'admin' WHERE email = 'admin@sistema.com'`);
-            console.log('✅ Usuário admin já existe');
-        }
-    } catch (err) {
-        console.error('❌ Erro ao inicializar banco:', err);
-    }
-}
-
-initDatabase();
-
 // ROTAS - LOGIN
 app.get('/login', (req, res) => {
     if (req.session && req.session.usuario) {
@@ -155,9 +92,7 @@ app.post('/login', async (req, res) => {
     }
 
     try {
-        const { rows } = await db.query('SELECT * FROM usuarios WHERE email = $1', [email]);
-        const usuario = rows[0];
-
+        const usuario = await db.get('SELECT * FROM usuarios WHERE email = ?', [email]);
         if (!usuario) {
             return res.render('login', { erro: 'Email ou senha incorretos' });
         }
@@ -177,7 +112,7 @@ app.post('/login', async (req, res) => {
         res.redirect('/');
     } catch (err) {
         console.error('❌ Erro no login:', err);
-        res.render('login', { erro: 'Erro ao fazer login' });
+        res.render('login', { erro: 'Erro interno do servidor ao autenticar' });
     }
 });
 
@@ -189,10 +124,10 @@ app.get('/logout', (req, res) => {
 // ROTAS - GERENCIAMENTO DE USUÁRIOS (APENAS ADMIN)
 app.get('/usuarios', verificarAuth, verificarAdmin, async (req, res) => {
     try {
-        const { rows } = await db.query('SELECT id, nome, email, tipo, created_at FROM usuarios ORDER BY created_at DESC');
+        const usuarios = await db.all('SELECT id, nome, email, tipo, created_at FROM usuarios ORDER BY created_at DESC');
         res.render('usuarios', {
             usuario: req.session.usuario,
-            usuarios: rows
+            usuarios: usuarios
         });
     } catch (err) {
         console.error('❌ Erro ao carregar usuários:', err);
@@ -208,19 +143,17 @@ app.post('/api/usuarios', verificarAuth, verificarAdmin, async (req, res) => {
     }
 
     try {
-        const { rows } = await db.query('SELECT * FROM usuarios WHERE email = $1', [email]);
-
-        if (rows.length > 0) {
+        const usuarioExistente = await db.get('SELECT * FROM usuarios WHERE email = ?', [email]);
+        if (usuarioExistente) {
             return res.json({ success: false, error: 'Email já cadastrado' });
         }
 
         const hash = await bcrypt.hash(senha, 10);
-        const result = await db.query(
-            `INSERT INTO usuarios (nome, email, senha, tipo) VALUES ($1, $2, $3, $4) RETURNING id`,
+        const result = await db.run(
+            `INSERT INTO usuarios (nome, email, senha, tipo) VALUES (?, ?, ?, ?)`,
             [nome, email, hash, tipo]
         );
-
-        res.json({ success: true, id: result.rows[0].id });
+        res.json({ success: true, id: result.lastID });
     } catch (err) {
         console.error('❌ Erro ao criar usuário:', err);
         res.json({ success: false, error: 'Erro ao criar usuário: ' + err.message });
@@ -238,20 +171,20 @@ app.put('/api/usuarios/:id', verificarAuth, verificarAdmin, async (req, res) => 
     try {
         if (senha && senha.trim() !== '') {
             const hash = await bcrypt.hash(senha, 10);
-            await db.query(
-                `UPDATE usuarios SET nome = $1, email = $2, tipo = $3, senha = $4 WHERE id = $5`,
+            await db.run(
+                `UPDATE usuarios SET nome = ?, email = ?, tipo = ?, senha = ? WHERE id = ?`,
                 [nome, email, tipo, hash, userId]
             );
         } else {
-            await db.query(
-                `UPDATE usuarios SET nome = $1, email = $2, tipo = $3 WHERE id = $4`,
+            await db.run(
+                `UPDATE usuarios SET nome = ?, email = ?, tipo = ? WHERE id = ?`,
                 [nome, email, tipo, userId]
             );
         }
         res.json({ success: true });
     } catch (err) {
         console.error('❌ Erro ao atualizar usuário:', err);
-        res.json({ success: false, error: 'Erro ao atualizar usuário' });
+        res.json({ success: false, error: 'Erro ao atualizar usuário: ' + err.message });
     }
 });
 
@@ -263,36 +196,41 @@ app.delete('/api/usuarios/:id', verificarAuth, verificarAdmin, async (req, res) 
     }
 
     try {
-        await db.query('DELETE FROM usuarios WHERE id = $1', [userId]);
+        await db.run('DELETE FROM usuarios WHERE id = ?', [userId]);
         res.json({ success: true });
     } catch (err) {
         console.error('❌ Erro ao excluir usuário:', err);
-        res.json({ success: false, error: 'Erro ao excluir usuário' });
+        res.json({ success: false, error: 'Erro ao excluir usuário: ' + err.message });
     }
 });
 
 // ROTAS - DASHBOARD
 app.get('/', verificarAuth, async (req, res) => {
     try {
-        const notasResult = await db.query('SELECT * FROM notas_fiscais ORDER BY created_at DESC');
-        const notas = notasResult.rows;
+        const notas = await db.all('SELECT * FROM notas_fiscais ORDER BY created_at DESC');
+        const stats = await db.all(`SELECT 
+                    COUNT(*) as total,
+                    SUM(CASE WHEN status = 'entrada' THEN 1 ELSE 0 END) as entrada,
+                    SUM(CASE WHEN status = 'financeiro' THEN 1 ELSE 0 END) as financeiro,
+                    SUM(CASE WHEN status = 'guarda' THEN 1 ELSE 0 END) as guarda,
+                    SUM(CASE WHEN tipo_nota = 'NF/AP' THEN 1 ELSE 0 END) as nfap,
+                    SUM(CASE WHEN tipo_nota = 'Insumo' THEN 1 ELSE 0 END) as insumo,
+                    SUM(valor) as valor_total
+                FROM notas_fiscais`);
 
-        const statsResult = await db.query(`
-            SELECT 
-                COUNT(*) as total,
-                SUM(CASE WHEN status = 'entrada' THEN 1 ELSE 0 END) as entrada,
-                SUM(CASE WHEN status = 'financeiro' THEN 1 ELSE 0 END) as financeiro,
-                SUM(CASE WHEN status = 'guarda' THEN 1 ELSE 0 END) as guarda,
-                SUM(CASE WHEN tipo_nota = 'NF/AP' THEN 1 ELSE 0 END) as nfap,
-                SUM(CASE WHEN tipo_nota = 'Insumo' THEN 1 ELSE 0 END) as insumo,
-                SUM(valor) as valor_total
-            FROM notas_fiscais
-        `);
-
-        const estatisticas = statsResult.rows[0] || {
+        const estatisticas = stats[0] || {
             total: 0, entrada: 0, financeiro: 0, guarda: 0,
             nfap: 0, insumo: 0, valor_total: 0
         };
+
+        // Correção de tipagem para valores nulos vindos do banco
+        estatisticas.total = parseInt(estatisticas.total || 0);
+        estatisticas.entrada = parseInt(estatisticas.entrada || 0);
+        estatisticas.financeiro = parseInt(estatisticas.financeiro || 0);
+        estatisticas.guarda = parseInt(estatisticas.guarda || 0);
+        estatisticas.nfap = parseInt(estatisticas.nfap || 0);
+        estatisticas.insumo = parseInt(estatisticas.insumo || 0);
+        estatisticas.valor_total = parseFloat(estatisticas.valor_total || 0);
 
         res.render('index', {
             usuario: req.session.usuario,
@@ -300,8 +238,8 @@ app.get('/', verificarAuth, async (req, res) => {
             stats: estatisticas
         });
     } catch (err) {
-        console.error('❌ Erro ao carregar dashboard:', err);
-        res.status(500).send('Erro ao carregar dashboard');
+        console.error('❌ Erro ao carregar notas:', err);
+        res.status(500).send('Erro ao carregar dados do dashboard');
     }
 });
 
@@ -334,31 +272,31 @@ app.post('/api/notas', verificarAuth, upload.single('pdf_nota'), async (req, res
         });
     }
 
-    try {
-        const result = await db.query(
-            `INSERT INTO notas_fiscais 
+    const sql = `INSERT INTO notas_fiscais 
             (tipo_nota, numero_nota, chave_acesso, cnpj_cpf, fornecedor, data_emissao, data_vencimento, valor, descricao, centro_custo, 
              status, pdf_nota_url, observacoes) 
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'entrada', $11, $12) RETURNING id`,
-            [
-                tipo_nota,
-                numero_nota,
-                chave_acesso || null,
-                cnpj_cpf,
-                fornecedor,
-                data_emissao,
-                data_vencimento,
-                parseFloat(valor),
-                descricao || null,
-                centro_custo || null,
-                pdf_nota_url,
-                observacoes || null
-            ]
-        );
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'entrada', ?, ?)`;
 
-        res.json({ success: true, id: result.rows[0].id });
+    const params = [
+        tipo_nota,
+        numero_nota,
+        chave_acesso || null,
+        cnpj_cpf,
+        fornecedor,
+        data_emissao,
+        data_vencimento,
+        parseFloat(valor),
+        descricao || null,
+        centro_custo || null,
+        pdf_nota_url,
+        observacoes || null
+    ];
+
+    try {
+        const result = await db.run(sql, params);
+        res.json({ success: true, id: result.lastID });
     } catch (err) {
-        console.error('❌ Erro ao criar nota:', err);
+        console.error('❌ Erro ao criar nota fiscal:', err);
         res.json({ success: false, error: 'Erro ao criar nota fiscal: ' + err.message });
     }
 });
@@ -368,9 +306,7 @@ app.get('/nota/:id', verificarAuth, async (req, res) => {
     const notaId = req.params.id;
 
     try {
-        const { rows } = await db.query('SELECT * FROM notas_fiscais WHERE id = $1', [notaId]);
-        const nota = rows[0];
-
+        const nota = await db.get('SELECT * FROM notas_fiscais WHERE id = ?', [notaId]);
         if (!nota) {
             return res.status(404).send('Nota não encontrada');
         }
@@ -390,10 +326,10 @@ app.post('/api/notas/:id/enviar-financeiro', verificarAuth, async (req, res) => 
     const notaId = req.params.id;
 
     try {
-        await db.query('UPDATE notas_fiscais SET status = $1 WHERE id = $2', ['financeiro', notaId]);
+        await db.run('UPDATE notas_fiscais SET status = ? WHERE id = ?', ['financeiro', notaId]);
         res.json({ success: true });
     } catch (err) {
-        console.error('❌ Erro ao enviar nota:', err);
+        console.error('❌ Erro ao enviar nota para o financeiro:', err);
         res.json({ success: false, error: 'Erro ao enviar nota' });
     }
 });
@@ -417,10 +353,9 @@ app.post('/api/notas/:id/confirmar-pagamento', verificarAuth, upload.single('pdf
     }
 
     try {
-        await db.query(
-            `UPDATE notas_fiscais 
-            SET status = 'guarda', data_pagamento = $1, pdf_comprovante_url = $2 
-            WHERE id = $3`,
+        await db.run(`UPDATE notas_fiscais 
+                SET status = 'guarda', data_pagamento = ?, pdf_comprovante_url = ? 
+                WHERE id = ?`,
             [data_pagamento, pdf_comprovante_url, notaId]
         );
         res.json({ success: true });
@@ -435,9 +370,7 @@ app.delete('/api/notas/:id', verificarAuth, async (req, res) => {
     const notaId = req.params.id;
 
     try {
-        const { rows } = await db.query('SELECT * FROM notas_fiscais WHERE id = $1', [notaId]);
-        const nota = rows[0];
-
+        const nota = await db.get('SELECT * FROM notas_fiscais WHERE id = ?', [notaId]);
         if (!nota) {
             return res.json({ success: false, error: 'Nota não encontrada' });
         }
@@ -451,7 +384,7 @@ app.delete('/api/notas/:id', verificarAuth, async (req, res) => {
             if (fs.existsSync(caminhoComp)) fs.unlinkSync(caminhoComp);
         }
 
-        await db.query('DELETE FROM notas_fiscais WHERE id = $1', [notaId]);
+        await db.run('DELETE FROM notas_fiscais WHERE id = ?', [notaId]);
         res.json({ success: true });
     } catch (err) {
         console.error('❌ Erro ao excluir nota:', err);
@@ -466,9 +399,7 @@ app.post('/api/notas/:id/excluir-pdf', verificarAuth, async (req, res) => {
     const campo = tipo === 'nota' ? 'pdf_nota_url' : 'pdf_comprovante_url';
 
     try {
-        const { rows } = await db.query(`SELECT ${campo} FROM notas_fiscais WHERE id = $1`, [notaId]);
-        const nota = rows[0];
-
+        const nota = await db.get(`SELECT ${campo} FROM notas_fiscais WHERE id = ?`, [notaId]);
         if (!nota || !nota[campo]) {
             return res.json({ success: false, error: 'Arquivo não encontrado' });
         }
@@ -478,7 +409,7 @@ app.post('/api/notas/:id/excluir-pdf', verificarAuth, async (req, res) => {
             fs.unlinkSync(caminhoArquivo);
         }
 
-        await db.query(`UPDATE notas_fiscais SET ${campo} = NULL WHERE id = $1`, [notaId]);
+        await db.run(`UPDATE notas_fiscais SET ${campo} = NULL WHERE id = ?`, [notaId]);
         res.json({ success: true });
     } catch (err) {
         console.error('❌ Erro ao excluir PDF:', err);
@@ -486,15 +417,24 @@ app.post('/api/notas/:id/excluir-pdf', verificarAuth, async (req, res) => {
     }
 });
 
-// INICIAR SERVIDOR
-app.listen(PORT, () => {
-    console.log('\n========================================');
-    console.log('🚀 SERVIDOR INICIADO COM SUCESSO!');
-    console.log('========================================');
-    console.log(`📍 URL: http://localhost:${PORT}`);
-    console.log(`📋 Login: http://localhost:${PORT}/login`);
-    console.log(`👤 Usuário: admin@sistema.com`);
-    console.log(`🔑 Senha: admin123`);
-    console.log(`📁 Pasta uploads: ${path.join(__dirname, 'uploads')}`);
-    console.log('========================================\n');
-});
+// INICIAR SERVIDOR (apenas se executado diretamente, não via testes)
+if (require.main === module) {
+    db.init().then(() => {
+        app.listen(PORT, () => {
+            console.log('\n========================================');
+            console.log('🚀 SERVIDOR INICIADO COM SUCESSO!');
+            console.log('========================================');
+            console.log(`📍 URL: http://localhost:${PORT}`);
+            console.log(`📋 Login: http://localhost:${PORT}/login`);
+            console.log(`👤 Usuário: admin@sistema.com`);
+            console.log(`🔑 Senha: admin123`);
+            console.log(`📁 Pasta uploads: ${path.join(__dirname, 'uploads')}`);
+            console.log('========================================\n');
+        });
+    }).catch(err => {
+        console.error('❌ Falha crítica ao inicializar o banco de dados:', err);
+        process.exit(1);
+    });
+}
+
+module.exports = app;
